@@ -20,24 +20,28 @@ const EXPENSE_CATEGORIES = ['Housing', 'Tax', 'Insurance', 'Education', 'Family'
 type IncomeRow = { id: string; label: string; amount: string; category: string };
 type FixedRow = { id: string; label: string; amount: string; recurring: boolean; category: string };
 
-const INCOME_DEFAULTS: IncomeRow[] = [
-    { id: 'salary', label: 'Salary', amount: '', category: 'Employment' },
-    { id: 'commissions', label: 'Commissions', amount: '', category: 'Employment' },
-    { id: 'bonuses', label: 'Bonuses', amount: '', category: 'Employment' },
-    { id: 'dividends', label: 'Dividends', amount: '', category: 'Investment' },
-    { id: 'rentalIncome', label: 'Rental Income', amount: '', category: 'Investment' },
-    { id: 'interestIncome', label: 'Interest Income', amount: '', category: 'Investment' },
-    { id: 'misc', label: 'Misc', amount: '', category: 'Other' },
-];
+function makeIncomeDefaults(): IncomeRow[] {
+    return [
+        { id: uid(), label: 'Salary', amount: '', category: 'Employment' },
+        { id: uid(), label: 'Commissions', amount: '', category: 'Employment' },
+        { id: uid(), label: 'Bonuses', amount: '', category: 'Employment' },
+        { id: uid(), label: 'Dividends', amount: '', category: 'Investment' },
+        { id: uid(), label: 'Rental Income', amount: '', category: 'Investment' },
+        { id: uid(), label: 'Interest Income', amount: '', category: 'Investment' },
+        { id: uid(), label: 'Misc', amount: '', category: 'Other' },
+    ];
+}
 
-const EXPENSE_DEFAULTS: FixedRow[] = [
-    { id: 'utilitiesAndBills', label: 'Utilities & Bills', amount: '', recurring: false, category: 'Housing' },
-    { id: 'taxes', label: 'Taxes', amount: '', recurring: false, category: 'Tax' },
-    { id: 'insurance', label: 'Insurance', amount: '', recurring: false, category: 'Insurance' },
-    { id: 'school', label: 'School', amount: '', recurring: false, category: 'Education' },
-    { id: 'family', label: 'Family', amount: '', recurring: false, category: 'Family' },
-    { id: 'misc', label: 'Misc', amount: '', recurring: false, category: 'Other' },
-];
+function makeExpenseDefaults(): FixedRow[] {
+    return [
+        { id: uid(), label: 'Utilities & Bills', amount: '', recurring: false, category: 'Housing' },
+        { id: uid(), label: 'Taxes', amount: '', recurring: false, category: 'Tax' },
+        { id: uid(), label: 'Insurance', amount: '', recurring: false, category: 'Insurance' },
+        { id: uid(), label: 'School', amount: '', recurring: false, category: 'Education' },
+        { id: uid(), label: 'Family', amount: '', recurring: false, category: 'Family' },
+        { id: uid(), label: 'Misc', amount: '', recurring: false, category: 'Other' },
+    ];
+}
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
@@ -53,8 +57,8 @@ export default function MonthlyBudgetPage() {
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
     const [month, setMonth] = useState(now.getMonth() + 1);
-    const [income, setIncome] = useState<IncomeRow[]>(INCOME_DEFAULTS.map(r => ({ ...r })));
-    const [fixed, setFixed] = useState<FixedRow[]>(EXPENSE_DEFAULTS.map(r => ({ ...r })));
+    const [income, setIncome] = useState<IncomeRow[]>(makeIncomeDefaults());
+    const [fixed, setFixed] = useState<FixedRow[]>(makeExpenseDefaults());
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -82,18 +86,18 @@ export default function MonthlyBudgetPage() {
             .then(data => {
                 if (data) {
                     if (Array.isArray(data.income) && data.income.length > 0) {
-                        setIncome(data.income.map((r: any) => ({ ...r, amount: r.amount != null ? String(r.amount) : '' })));
+                        setIncome(data.income.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
                     } else {
-                        setIncome(INCOME_DEFAULTS.map(r => ({ ...r })));
+                        setIncome(makeIncomeDefaults());
                     }
                     if (Array.isArray(data.fixedExpenses) && data.fixedExpenses.length > 0) {
-                        setFixed(data.fixedExpenses.map((r: any) => ({ ...r, amount: r.amount != null ? String(r.amount) : '' })));
+                        setFixed(data.fixedExpenses.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
                     } else {
-                        setFixed(EXPENSE_DEFAULTS.map(r => ({ ...r })));
+                        setFixed(makeExpenseDefaults());
                     }
                 } else {
-                    setIncome(INCOME_DEFAULTS.map(r => ({ ...r })));
-                    setFixed(EXPENSE_DEFAULTS.map(r => ({ ...r })));
+                    setIncome(makeIncomeDefaults());
+                    setFixed(makeExpenseDefaults());
                 }
             })
             .finally(() => setLoading(false));
@@ -143,8 +147,8 @@ export default function MonthlyBudgetPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    income: income.map(r => ({ ...r, amount: parseFloat(r.amount) || 0 })),
-                    fixedExpenses: fixed.map(r => ({ ...r, amount: parseFloat(r.amount) || 0 })),
+                    income: income.map(({ id: _id, ...r }) => ({ ...r, amount: parseFloat(r.amount) || 0 })),
+                    fixedExpenses: fixed.map(({ id: _id, ...r }) => ({ ...r, amount: parseFloat(r.amount) || 0 })),
                 }),
             });
             if (res.ok) {
