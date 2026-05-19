@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { encryptAmount, decryptAmount } from '@/lib/crypto';
 import { getBudget, upsertBudget } from '@/services/mongodb';
 
 async function getAuth(request: NextRequest) {
@@ -21,34 +22,31 @@ export async function GET(
 
     let budget = await getBudget(auth.userId, year, month);
 
-    // No data this month — seed from previous month
     if (!budget) {
         const prevMonth = month === 1 ? 12 : month - 1;
         const prevYear = month === 1 ? year - 1 : year;
         const prev = await getBudget(auth.userId, prevYear, prevMonth);
 
         if (prev) {
-            type FixedItem = { id: string; label: string; amount: number; recurring: boolean; category: string };
-            type IncomeItem = { id: string; label: string; amount: number; category: string };
+            const prevIncome = Array.isArray(prev.income)
+                ? prev.income.map((item: any) => ({ ...item, amount: decryptAmount(item.amount) }))
+                : null;
+            const prevFixed = Array.isArray(prev.fixedExpenses)
+                ? prev.fixedExpenses.map((item: any) => ({ ...item, amount: decryptAmount(item.amount) }))
+                : null;
 
-            const seededFixed = Array.isArray(prev.fixedExpenses)
-                ? (prev.fixedExpenses as FixedItem[]).map(item => ({
-                    ...item,
-                    amount: item.recurring ? item.amount : 0,
-                }))
-                : undefined;
-
-            const seededIncome = Array.isArray(prev.income)
-                ? (prev.income as IncomeItem[])
-                : undefined;
-
-            if (seededFixed || seededIncome) {
+            if (prevIncome || prevFixed) {
                 budget = {
-                    ...(seededIncome && { income: seededIncome }),
-                    ...(seededFixed && { fixedExpenses: seededFixed }),
+                    ...(prevIncome && { income: prevIncome }),
+                    ...(prevFixed && { fixedExpenses: prevFixed.map((item: any) => ({ ...item, amount: item.recurring ? item.amount : 0 })) }),
                 };
             }
         }
+    } else {
+        if (Array.isArray(budget.income))
+            budget.income = budget.income.map((item: any) => ({ ...item, amount: decryptAmount(item.amount) }));
+        if (Array.isArray(budget.fixedExpenses))
+            budget.fixedExpenses = budget.fixedExpenses.map((item: any) => ({ ...item, amount: decryptAmount(item.amount) }));
     }
 
     return NextResponse.json(budget ?? null);
@@ -66,6 +64,16 @@ export async function PUT(
     const month = parseInt(m);
     const body = await request.json();
 
-    await upsertBudget(auth.userId, year, month, body);
+    const encrypted = {
+        ...body,
+        ...(Array.isArray(body.income) && {
+            income: body.income.map((item: any) => ({ ...item, amount: encryptAmount(parseFloat(item.amount) || 0) })),
+        }),
+        ...(Array.isArray(body.fixedExpenses) && {
+            fixedExpenses: body.fixedExpenses.map((item: any) => ({ ...item, amount: encryptAmount(parseFloat(item.amount) || 0) })),
+        }),
+    };
+
+    await upsertBudget(auth.userId, year, month, encrypted);
     return NextResponse.json({ success: true });
 }
