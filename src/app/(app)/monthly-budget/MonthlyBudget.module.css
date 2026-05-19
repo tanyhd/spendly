@@ -1,0 +1,418 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 7rem;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+}
+
+.subtitle {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.monthNav {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: 0.25rem;
+}
+
+.monthNavBtn {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+
+.monthNavBtn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.monthLabel {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 9.5rem;
+    text-align: center;
+}
+
+.saveBtn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+}
+
+.saveBtn:hover:not(:disabled) {
+    background: var(--primary-dark);
+}
+
+.saveBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.saveBtnSaved {
+    background: var(--success);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.sectionTitleIncome {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+}
+
+.sectionTitleFixed {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--danger);
+    margin-bottom: 1.5rem;
+}
+
+.sectionTitleVariable {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.sectionIcon {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+}
+
+.expenseCol {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.rows {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.rowLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.rowLabel {
+    font-size: 1rem;
+    color: var(--text);
+    flex: 1;
+}
+
+.inputWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 11rem;
+    flex-shrink: 0;
+}
+
+.currency {
+    position: absolute;
+    left: 0.625rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem 0.5rem 1.5rem;
+    color: var(--text);
+    font-size: 1rem;
+    text-align: right;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.input::-webkit-outer-spin-button,
+.input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input[type='number'] {
+    -moz-appearance: textfield;
+}
+
+.input:focus {
+    border-color: var(--primary);
+}
+
+.input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.4;
+}
+
+.recurringBtn {
+    width: 1.625rem;
+    height: 1.625rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.recurringBtn:hover {
+    opacity: 0.75;
+}
+
+.recurringOn {
+    color: var(--text);
+}
+
+.totalRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1rem;
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+}
+
+.totalLabel {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.totalIncome {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.totalExpense {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--danger);
+}
+
+.variableHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.2rem 0.5rem;
+    white-space: nowrap;
+}
+
+.variableEmpty {
+    font-size: 1rem;
+    color: var(--text-muted);
+    padding: 0.75rem 0;
+    font-style: italic;
+}
+
+/* Sticky summary bar */
+.summaryBar {
+    position: fixed;
+    bottom: 1.25rem;
+    left: calc(220px + 1.5rem);
+    right: 1.5rem;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1.25rem 2rem;
+    background: rgba(25, 24, 41, 0.97);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+}
+
+.summaryItem {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.summaryNetBox {
+    background: rgba(123, 97, 255, 0.08);
+    border: 1px solid rgba(123, 97, 255, 0.2);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.875rem;
+}
+
+.summaryLabel {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.summaryIncome {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.summaryExpense {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--danger);
+}
+
+.summaryNet {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.positive { color: var(--success); }
+.negative { color: var(--danger); }
+
+.summaryDivider {
+    width: 1px;
+    height: 3rem;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.ringWrap {
+    margin-left: auto;
+    position: relative;
+    width: 4rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ring {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.ringBg {
+    stroke: var(--border);
+    stroke-width: 3;
+}
+
+.ringFg {
+    stroke: var(--primary);
+    stroke-width: 3;
+    transition: stroke-dasharray 0.4s ease;
+}
+
+.ringLabel {
+    position: absolute;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.loading {
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 2rem 0;
+}

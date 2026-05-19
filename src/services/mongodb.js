@@ -74,3 +74,19 @@ export async function deleteUser(userId) {
     const db = await connectToDb();
     return await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
 }
+
+export async function getBudget(userId, year, month) {
+    const db = await connectToDb();
+    return await db.collection('monthly_plans').findOne({
+        userId: new ObjectId(userId), year, month,
+    });
+}
+
+export async function upsertBudget(userId, year, month, data) {
+    const db = await connectToDb();
+    await db.collection('monthly_plans').updateOne(
+        { userId: new ObjectId(userId), year, month },
+        { $set: { ...data, updatedAt: new Date() } },
+        { upsert: true }
+    );
+}
