@@ -1,13 +1,5 @@
-export default function Bank({ stroke, ...rest }: { stroke?: string; [rest: string]: any }) {
+export default function Bank({ stroke, ...rest }: { stroke?: string;[rest: string]: any }) {
     return (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" {...rest}>
-            <path d="M10 1.667L1.667 6.667H18.333L10 1.667Z" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M1.667 16.667H18.333" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M1.667 18.333H18.333" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M4.167 6.667V16.667" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M7.917 6.667V16.667" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M12.083 6.667V16.667" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M15.833 6.667V16.667" stroke={stroke || 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e3e3e3"><path d="M200-280v-280h80v280h-80Zm240 0v-280h80v280h-80ZM80-120v-80h800v80H80Zm600-160v-280h80v280h-80ZM80-640v-80l400-200 400 200v80H80Zm178-80h444-444Zm0 0h444L480-830 258-720Z" /></svg>
     );
 }

@@ -1,16 +1,5 @@
-export default function AnnualOverview({ stroke, ...rest }: { stroke?: string; [rest: string]: any }) {
+export default function AnnualOverview({ stroke, ...rest }: { stroke?: string;[rest: string]: any }) {
     return (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" {...rest}>
-            <rect x="1.667" y="3.333" width="16.667" height="15" rx="1.5" stroke={stroke || 'currentColor'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M13.333 1.667V5" stroke={stroke || 'currentColor'} strokeWidth="1.75" strokeLinecap="round" />
-            <path d="M6.667 1.667V5" stroke={stroke || 'currentColor'} strokeWidth="1.75" strokeLinecap="round" />
-            <path d="M1.667 8.333H18.333" stroke={stroke || 'currentColor'} strokeWidth="1.75" strokeLinecap="round" />
-            <circle cx="5.833" cy="12.083" r="1" fill={stroke || 'currentColor'} />
-            <circle cx="10" cy="12.083" r="1" fill={stroke || 'currentColor'} />
-            <circle cx="14.167" cy="12.083" r="1" fill={stroke || 'currentColor'} />
-            <circle cx="5.833" cy="15.833" r="1" fill={stroke || 'currentColor'} />
-            <circle cx="10" cy="15.833" r="1" fill={stroke || 'currentColor'} />
-            <circle cx="14.167" cy="15.833" r="1" fill={stroke || 'currentColor'} />
-        </svg>
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor" {...rest}><path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Zm280 240q-17 0-28.5-11.5T440-440q0-17 11.5-28.5T480-480q17 0 28.5 11.5T520-440q0 17-11.5 28.5T480-400Zm-188.5-11.5Q280-423 280-440t11.5-28.5Q303-480 320-480t28.5 11.5Q360-457 360-440t-11.5 28.5Q337-400 320-400t-28.5-11.5ZM640-400q-17 0-28.5-11.5T600-440q0-17 11.5-28.5T640-480q17 0 28.5 11.5T680-440q0 17-11.5 28.5T640-400ZM480-240q-17 0-28.5-11.5T440-280q0-17 11.5-28.5T480-320q17 0 28.5 11.5T520-280q0 17-11.5 28.5T480-240Zm-188.5-11.5Q280-263 280-280t11.5-28.5Q303-320 320-320t28.5 11.5Q360-297 360-280t-11.5 28.5Q337-240 320-240t-28.5-11.5ZM640-240q-17 0-28.5-11.5T600-280q0-17 11.5-28.5T640-320q17 0 28.5 11.5T680-280q0 17-11.5 28.5T640-240Z" /></svg>
     );
 }
