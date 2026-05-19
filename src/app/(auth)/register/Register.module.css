@@ -6,6 +6,17 @@
     max-width: 460px;
 }
 
+.logoWrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: -1.5rem;
+}
+
+.logoImg {
+    width: 11rem;
+    height: auto;
+}
+
 .title {
     font-size: 1.875rem;
     font-weight: 700;

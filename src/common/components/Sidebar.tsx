@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import cx from 'classnames';
 import { useAuth } from '@/context/AuthContext';
-import Bank from '@/common/icons/Bank';
 import Dashboard from '@/common/icons/Dashboard';
 import DailyLog from '@/common/icons/DailyLog';
 import MonthlyBudget from '@/common/icons/MonthlyBudget';
@@ -28,7 +27,9 @@ export default function Sidebar() {
     return (
         <aside className={styles.sidebar}>
             <div className={styles.logo}>
-                <Bank />
+                <div className={styles.logoImgWrap}>
+                    <img src="/logo.png" alt="Spendly" className={styles.logoImg} />
+                </div>
                 <span className={styles.logoText}>SPENDLY</span>
             </div>
 

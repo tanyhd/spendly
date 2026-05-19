@@ -44,6 +44,9 @@ export default function LoginPage() {
 
     return (
         <div className={styles.card}>
+            <div className={styles.logoWrap}>
+                <img src="/logo.png" alt="Spendly" className={styles.logoImg} />
+            </div>
             <h1 className={styles.title}>Welcome back</h1>
             <p className={styles.subtitle}>Sign in to your account</p>
 

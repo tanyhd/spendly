@@ -14,16 +14,34 @@
 .logo {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
-    color: var(--text);
-    padding: 0 0.5rem;
-    margin-bottom: 2rem;
+    gap: 0;
+    padding: 0;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+}
+
+.logoImgWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: -1.5rem;
+}
+
+.logoImg {
+    width: 7rem;
+    height: 7rem;
+    display: block;
+    object-fit: cover;
+    object-position: top;
 }
 
 .logoText {
-    font-size: 1.0625rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    margin-left: -0.75rem;
 }
 
 .nav {
