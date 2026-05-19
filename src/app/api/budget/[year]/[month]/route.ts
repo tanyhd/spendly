@@ -21,20 +21,33 @@ export async function GET(
 
     let budget = await getBudget(auth.userId, year, month);
 
-    // No data this month — seed recurring fixed expenses from previous month
+    // No data this month — seed from previous month
     if (!budget) {
         const prevMonth = month === 1 ? 12 : month - 1;
         const prevYear = month === 1 ? year - 1 : year;
         const prev = await getBudget(auth.userId, prevYear, prevMonth);
 
-        if (prev?.fixedExpenses) {
-            const seeded: Record<string, { amount: number; recurring: boolean }> = {};
-            for (const [key, val] of Object.entries(prev.fixedExpenses as Record<string, { amount: number; recurring: boolean }>)) {
-                seeded[key] = val.recurring
-                    ? { amount: val.amount, recurring: true }
-                    : { amount: 0, recurring: false };
+        if (prev) {
+            type FixedItem = { id: string; label: string; amount: number; recurring: boolean; category: string };
+            type IncomeItem = { id: string; label: string; amount: number; category: string };
+
+            const seededFixed = Array.isArray(prev.fixedExpenses)
+                ? (prev.fixedExpenses as FixedItem[]).map(item => ({
+                    ...item,
+                    amount: item.recurring ? item.amount : 0,
+                }))
+                : undefined;
+
+            const seededIncome = Array.isArray(prev.income)
+                ? (prev.income as IncomeItem[])
+                : undefined;
+
+            if (seededFixed || seededIncome) {
+                budget = {
+                    ...(seededIncome && { income: seededIncome }),
+                    ...(seededFixed && { fixedExpenses: seededFixed }),
+                };
             }
-            budget = { fixedExpenses: seeded };
         }
     }
 

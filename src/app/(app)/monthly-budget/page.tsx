@@ -7,41 +7,39 @@ import Payments from '@/common/icons/Payments';
 import Bank from '@/common/icons/Bank';
 import DailyLog from '@/common/icons/DailyLog';
 import Recurring from '@/common/icons/Recurring';
+import Trash from '@/common/icons/Trash';
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-const INCOME_FIELDS = [
-    { key: 'salary', label: 'Salary' },
-    { key: 'commissions', label: 'Commissions' },
-    { key: 'bonuses', label: 'Bonuses' },
-    { key: 'dividends', label: 'Dividends' },
-    { key: 'rentalIncome', label: 'Rental Income' },
-    { key: 'interestIncome', label: 'Interest Income' },
-    { key: 'misc', label: 'Misc' },
+const INCOME_CATEGORIES = ['Employment', 'Investment', 'Business', 'Other'] as const;
+const EXPENSE_CATEGORIES = ['Housing', 'Tax', 'Insurance', 'Education', 'Family', 'Other'] as const;
+
+type IncomeRow = { id: string; label: string; amount: string; category: string };
+type FixedRow = { id: string; label: string; amount: string; recurring: boolean; category: string };
+
+const INCOME_DEFAULTS: IncomeRow[] = [
+    { id: 'salary', label: 'Salary', amount: '', category: 'Employment' },
+    { id: 'commissions', label: 'Commissions', amount: '', category: 'Employment' },
+    { id: 'bonuses', label: 'Bonuses', amount: '', category: 'Employment' },
+    { id: 'dividends', label: 'Dividends', amount: '', category: 'Investment' },
+    { id: 'rentalIncome', label: 'Rental Income', amount: '', category: 'Investment' },
+    { id: 'interestIncome', label: 'Interest Income', amount: '', category: 'Investment' },
+    { id: 'misc', label: 'Misc', amount: '', category: 'Other' },
 ];
 
-const EXPENSE_FIELDS = [
-    { key: 'utilitiesAndBills', label: 'Utilities & Bills' },
-    { key: 'taxes', label: 'Taxes' },
-    { key: 'insurance', label: 'Insurance' },
-    { key: 'school', label: 'School' },
-    { key: 'family', label: 'Family' },
-    { key: 'misc', label: 'Misc' },
+const EXPENSE_DEFAULTS: FixedRow[] = [
+    { id: 'utilitiesAndBills', label: 'Utilities & Bills', amount: '', recurring: false, category: 'Housing' },
+    { id: 'taxes', label: 'Taxes', amount: '', recurring: false, category: 'Tax' },
+    { id: 'insurance', label: 'Insurance', amount: '', recurring: false, category: 'Insurance' },
+    { id: 'school', label: 'School', amount: '', recurring: false, category: 'Education' },
+    { id: 'family', label: 'Family', amount: '', recurring: false, category: 'Family' },
+    { id: 'misc', label: 'Misc', amount: '', recurring: false, category: 'Other' },
 ];
 
-type IncomeState = Record<string, string>;
-type FixedState = Record<string, { amount: string; recurring: boolean }>;
-
-function emptyIncome(): IncomeState {
-    return Object.fromEntries(INCOME_FIELDS.map(f => [f.key, '']));
-}
-
-function emptyFixed(): FixedState {
-    return Object.fromEntries(EXPENSE_FIELDS.map(f => [f.key, { amount: '', recurring: false }]));
-}
+function uid() { return Math.random().toString(36).slice(2, 9); }
 
 function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -51,8 +49,8 @@ export default function MonthlyBudgetPage() {
     const now = new Date();
     const [year, setYear] = useState(now.getFullYear());
     const [month, setMonth] = useState(now.getMonth() + 1);
-    const [income, setIncome] = useState<IncomeState>(emptyIncome());
-    const [fixed, setFixed] = useState<FixedState>(emptyFixed());
+    const [income, setIncome] = useState<IncomeRow[]>(INCOME_DEFAULTS.map(r => ({ ...r })));
+    const [fixed, setFixed] = useState<FixedRow[]>(EXPENSE_DEFAULTS.map(r => ({ ...r })));
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -78,28 +76,21 @@ export default function MonthlyBudgetPage() {
         fetch(`/api/budget/${year}/${month}`)
             .then(res => (res.ok ? res.json() : null))
             .then(data => {
-                const inc = emptyIncome();
-                const fx = emptyFixed();
                 if (data) {
-                    if (data.income) {
-                        INCOME_FIELDS.forEach(f => {
-                            if (data.income[f.key] != null) inc[f.key] = String(data.income[f.key]);
-                        });
+                    if (Array.isArray(data.income) && data.income.length > 0) {
+                        setIncome(data.income.map((r: any) => ({ ...r, amount: r.amount != null ? String(r.amount) : '' })));
+                    } else {
+                        setIncome(INCOME_DEFAULTS.map(r => ({ ...r })));
                     }
-                    if (data.fixedExpenses) {
-                        EXPENSE_FIELDS.forEach(f => {
-                            const e = data.fixedExpenses[f.key];
-                            if (e != null) {
-                                fx[f.key] = {
-                                    amount: e.amount != null ? String(e.amount) : '',
-                                    recurring: e.recurring ?? false,
-                                };
-                            }
-                        });
+                    if (Array.isArray(data.fixedExpenses) && data.fixedExpenses.length > 0) {
+                        setFixed(data.fixedExpenses.map((r: any) => ({ ...r, amount: r.amount != null ? String(r.amount) : '' })));
+                    } else {
+                        setFixed(EXPENSE_DEFAULTS.map(r => ({ ...r })));
                     }
+                } else {
+                    setIncome(INCOME_DEFAULTS.map(r => ({ ...r })));
+                    setFixed(EXPENSE_DEFAULTS.map(r => ({ ...r })));
                 }
-                setIncome(inc);
-                setFixed(fx);
             })
             .finally(() => setLoading(false));
     }, [year, month]);
@@ -114,9 +105,28 @@ export default function MonthlyBudgetPage() {
         else setMonth(m => m + 1);
     }
 
-    const totalIncome = INCOME_FIELDS.reduce((s, f) => s + (parseFloat(income[f.key]) || 0), 0);
-    const totalFixed = EXPENSE_FIELDS.reduce((s, f) => s + (parseFloat(fixed[f.key].amount) || 0), 0);
-    const totalExpenses = totalFixed;
+    function addIncomeRow() {
+        setIncome(prev => [...prev, { id: uid(), label: '', amount: '', category: 'Other' }]);
+    }
+    function updateIncome(id: string, patch: Partial<IncomeRow>) {
+        setIncome(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+    }
+    function deleteIncomeRow(id: string) {
+        setIncome(prev => prev.filter(r => r.id !== id));
+    }
+
+    function addFixedRow() {
+        setFixed(prev => [...prev, { id: uid(), label: '', amount: '', recurring: false, category: 'Other' }]);
+    }
+    function updateFixed(id: string, patch: Partial<FixedRow>) {
+        setFixed(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+    }
+    function deleteFixedRow(id: string) {
+        setFixed(prev => prev.filter(r => r.id !== id));
+    }
+
+    const totalIncome = income.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const totalExpenses = fixed.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     const netSavings = totalIncome - totalExpenses;
     const savingsPercent = totalIncome > 0
         ? Math.max(0, Math.min(100, Math.round((netSavings / totalIncome) * 100)))
@@ -129,13 +139,8 @@ export default function MonthlyBudgetPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    income: Object.fromEntries(INCOME_FIELDS.map(f => [f.key, parseFloat(income[f.key]) || 0])),
-                    fixedExpenses: Object.fromEntries(
-                        EXPENSE_FIELDS.map(f => [
-                            f.key,
-                            { amount: parseFloat(fixed[f.key].amount) || 0, recurring: fixed[f.key].recurring },
-                        ])
-                    ),
+                    income: income.map(r => ({ ...r, amount: parseFloat(r.amount) || 0 })),
+                    fixedExpenses: fixed.map(r => ({ ...r, amount: parseFloat(r.amount) || 0 })),
                 }),
             });
             if (res.ok) {
@@ -158,10 +163,7 @@ export default function MonthlyBudgetPage() {
                     <div className={styles.monthNavWrap} ref={pickerRef}>
                         <div className={styles.monthNav}>
                             <button className={styles.monthNavBtn} onClick={prevMonth}>&#8249;</button>
-                            <button
-                                className={styles.monthLabel}
-                                onClick={() => setPickerOpen(o => !o)}
-                            >
+                            <button className={styles.monthLabel} onClick={() => setPickerOpen(o => !o)}>
                                 {MONTHS[month - 1]} {year}
                             </button>
                             <button className={styles.monthNavBtn} onClick={nextMonth}>&#8250;</button>
@@ -181,11 +183,7 @@ export default function MonthlyBudgetPage() {
                                                 styles.pickerMonth,
                                                 pickerYear === year && i + 1 === month && styles.pickerMonthActive
                                             )}
-                                            onClick={() => {
-                                                setYear(pickerYear);
-                                                setMonth(i + 1);
-                                                setPickerOpen(false);
-                                            }}
+                                            onClick={() => { setYear(pickerYear); setMonth(i + 1); setPickerOpen(false); }}
                                         >
                                             {m.slice(0, 3)}
                                         </button>
@@ -215,24 +213,45 @@ export default function MonthlyBudgetPage() {
                             INCOME
                         </h2>
                         <div className={styles.rows}>
-                            {INCOME_FIELDS.map(f => (
-                                <div key={f.key} className={styles.row}>
-                                    <label className={styles.rowLabel}>{f.label}</label>
-                                    <div className={styles.inputWrap}>
-                                        <span className={styles.currency}>$</span>
+                            {income.map(row => (
+                                <div key={row.id} className={styles.row}>
+                                    <div className={styles.rowMain}>
+                                        <select
+                                            className={styles.categorySelect}
+                                            value={row.category}
+                                            onChange={e => updateIncome(row.id, { category: e.target.value })}
+                                        >
+                                            {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
                                         <input
-                                            className={styles.input}
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            placeholder="0.00"
-                                            value={income[f.key]}
-                                            onChange={e => setIncome(prev => ({ ...prev, [f.key]: e.target.value }))}
+                                            className={styles.labelInput}
+                                            type="text"
+                                            placeholder="Label"
+                                            value={row.label}
+                                            onChange={e => updateIncome(row.id, { label: e.target.value })}
                                         />
+                                    </div>
+                                    <div className={styles.rowActions}>
+                                        <div className={styles.inputWrap}>
+                                            <span className={styles.currency}>$</span>
+                                            <input
+                                                className={styles.input}
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                placeholder="0.00"
+                                                value={row.amount}
+                                                onChange={e => updateIncome(row.id, { amount: e.target.value })}
+                                            />
+                                        </div>
+                                        <button className={styles.deleteBtn} onClick={() => deleteIncomeRow(row.id)} title="Remove">
+                                            <Trash />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
                         </div>
+                        <button className={styles.addRowBtn} onClick={addIncomeRow}>+ Add</button>
                         <div className={styles.totalRow}>
                             <span className={styles.totalLabel}>Total Income</span>
                             <span className={styles.totalIncome}>${fmt(totalIncome)}</span>
@@ -247,40 +266,53 @@ export default function MonthlyBudgetPage() {
                                 Fixed Expenses
                             </h2>
                             <div className={styles.rows}>
-                                {EXPENSE_FIELDS.map(f => (
-                                    <div key={f.key} className={styles.row}>
-                                        <div className={styles.rowLeft}>
+                                {fixed.map(row => (
+                                    <div key={row.id} className={styles.row}>
+                                        <div className={styles.rowMain}>
                                             <button
                                                 type="button"
-                                                className={cx(styles.recurringBtn, fixed[f.key].recurring && styles.recurringOn)}
-                                                onClick={() => setFixed(prev => ({
-                                                    ...prev,
-                                                    [f.key]: { ...prev[f.key], recurring: !prev[f.key].recurring },
-                                                }))}
-                                                title={fixed[f.key].recurring ? 'Recurring — click to disable' : 'Set as recurring'}
+                                                className={cx(styles.recurringBtn, row.recurring && styles.recurringOn)}
+                                                onClick={() => updateFixed(row.id, { recurring: !row.recurring })}
+                                                title={row.recurring ? 'Recurring — click to disable' : 'Set as recurring'}
                                             >
                                                 <Recurring />
                                             </button>
-                                            <label className={styles.rowLabel}>{f.label}</label>
-                                        </div>
-                                        <div className={styles.inputWrap}>
-                                            <span className={styles.currency}>$</span>
+                                            <select
+                                                className={styles.categorySelect}
+                                                value={row.category}
+                                                onChange={e => updateFixed(row.id, { category: e.target.value })}
+                                            >
+                                                {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                            </select>
                                             <input
-                                                className={styles.input}
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                placeholder="0.00"
-                                                value={fixed[f.key].amount}
-                                                onChange={e => setFixed(prev => ({
-                                                    ...prev,
-                                                    [f.key]: { ...prev[f.key], amount: e.target.value },
-                                                }))}
+                                                className={styles.labelInput}
+                                                type="text"
+                                                placeholder="Label"
+                                                value={row.label}
+                                                onChange={e => updateFixed(row.id, { label: e.target.value })}
                                             />
+                                        </div>
+                                        <div className={styles.rowActions}>
+                                            <div className={styles.inputWrap}>
+                                                <span className={styles.currency}>$</span>
+                                                <input
+                                                    className={styles.input}
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    value={row.amount}
+                                                    onChange={e => updateFixed(row.id, { amount: e.target.value })}
+                                                />
+                                            </div>
+                                            <button className={styles.deleteBtn} onClick={() => deleteFixedRow(row.id)} title="Remove">
+                                                <Trash />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
                             </div>
+                            <button className={styles.addRowBtn} onClick={addFixedRow}>+ Add</button>
                         </section>
 
                         <section className={styles.card}>
