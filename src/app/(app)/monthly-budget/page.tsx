@@ -41,6 +41,10 @@ const EXPENSE_DEFAULTS: FixedRow[] = [
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
+function blockInvalidNumericKeys(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+}
+
 function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -241,6 +245,7 @@ export default function MonthlyBudgetPage() {
                                                 step="0.01"
                                                 placeholder="0.00"
                                                 value={row.amount}
+                                                onKeyDown={blockInvalidNumericKeys}
                                                 onChange={e => updateIncome(row.id, { amount: e.target.value })}
                                             />
                                         </div>
@@ -302,6 +307,7 @@ export default function MonthlyBudgetPage() {
                                                     step="0.01"
                                                     placeholder="0.00"
                                                     value={row.amount}
+                                                    onKeyDown={blockInvalidNumericKeys}
                                                     onChange={e => updateFixed(row.id, { amount: e.target.value })}
                                                 />
                                             </div>
