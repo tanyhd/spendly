@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import cx from 'classnames';
 import styles from './MonthlyBudget.module.css';
 import Payments from '@/common/icons/Payments';
@@ -56,6 +56,21 @@ export default function MonthlyBudgetPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const [pickerYear, setPickerYear] = useState(year);
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!pickerOpen) return;
+        setPickerYear(year);
+        function handleClick(e: MouseEvent) {
+            if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+                setPickerOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [pickerOpen, year]);
 
     useEffect(() => {
         setLoading(true);
@@ -140,10 +155,44 @@ export default function MonthlyBudgetPage() {
                     <p className={styles.subtitle}>Plan your expected income and fixed expenses.</p>
                 </div>
                 <div className={styles.headerRight}>
-                    <div className={styles.monthNav}>
-                        <button className={styles.monthNavBtn} onClick={prevMonth}>&#8249;</button>
-                        <span className={styles.monthLabel}>{MONTHS[month - 1]} {year}</span>
-                        <button className={styles.monthNavBtn} onClick={nextMonth}>&#8250;</button>
+                    <div className={styles.monthNavWrap} ref={pickerRef}>
+                        <div className={styles.monthNav}>
+                            <button className={styles.monthNavBtn} onClick={prevMonth}>&#8249;</button>
+                            <button
+                                className={styles.monthLabel}
+                                onClick={() => setPickerOpen(o => !o)}
+                            >
+                                {MONTHS[month - 1]} {year}
+                            </button>
+                            <button className={styles.monthNavBtn} onClick={nextMonth}>&#8250;</button>
+                        </div>
+                        {pickerOpen && (
+                            <div className={styles.picker}>
+                                <div className={styles.pickerYearRow}>
+                                    <button className={styles.pickerYearBtn} onClick={() => setPickerYear(y => y - 1)}>&#8249;</button>
+                                    <span className={styles.pickerYear}>{pickerYear}</span>
+                                    <button className={styles.pickerYearBtn} onClick={() => setPickerYear(y => y + 1)}>&#8250;</button>
+                                </div>
+                                <div className={styles.pickerGrid}>
+                                    {MONTHS.map((m, i) => (
+                                        <button
+                                            key={m}
+                                            className={cx(
+                                                styles.pickerMonth,
+                                                pickerYear === year && i + 1 === month && styles.pickerMonthActive
+                                            )}
+                                            onClick={() => {
+                                                setYear(pickerYear);
+                                                setMonth(i + 1);
+                                                setPickerOpen(false);
+                                            }}
+                                        >
+                                            {m.slice(0, 3)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <button
                         className={cx(styles.saveBtn, saved && styles.saveBtnSaved)}
