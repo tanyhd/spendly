@@ -62,9 +62,21 @@ export default function MonthlyBudgetPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
     const [pickerOpen, setPickerOpen] = useState(false);
     const [pickerYear, setPickerYear] = useState(year);
     const pickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!openCategoryId) return;
+        function handleClick(e: MouseEvent) {
+            if (!(e.target as Element).closest('[data-cat-drop]')) {
+                setOpenCategoryId(null);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [openCategoryId]);
 
     useEffect(() => {
         if (!pickerOpen) return;
@@ -160,6 +172,32 @@ export default function MonthlyBudgetPage() {
         }
     }
 
+    function renderCategoryPill(rowId: string, current: string, options: readonly string[], onSelect: (c: string) => void) {
+        return (
+            <div className={styles.categoryWrap} data-cat-drop="true">
+                <button
+                    className={cx(styles.categoryPill, openCategoryId === rowId && styles.categoryPillOpen)}
+                    onClick={() => setOpenCategoryId(openCategoryId === rowId ? null : rowId)}
+                >
+                    {current}
+                </button>
+                {openCategoryId === rowId && (
+                    <div className={styles.categoryDropdown}>
+                        {options.map(c => (
+                            <button
+                                key={c}
+                                className={cx(styles.categoryOption, current === c && styles.categoryOptionActive)}
+                                onClick={() => { onSelect(c); setOpenCategoryId(null); }}
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className={styles.page}>
             <div className={styles.header}>
@@ -224,13 +262,7 @@ export default function MonthlyBudgetPage() {
                             {income.map(row => (
                                 <div key={row.id} className={styles.row}>
                                     <div className={styles.rowMain}>
-                                        <select
-                                            className={styles.categorySelect}
-                                            value={row.category}
-                                            onChange={e => updateIncome(row.id, { category: e.target.value })}
-                                        >
-                                            {INCOME_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
+                                        {renderCategoryPill(row.id, row.category, INCOME_CATEGORIES, c => updateIncome(row.id, { category: c }))}
                                         <input
                                             className={styles.labelInput}
                                             type="text"
@@ -286,13 +318,7 @@ export default function MonthlyBudgetPage() {
                                             >
                                                 <Recurring />
                                             </button>
-                                            <select
-                                                className={styles.categorySelect}
-                                                value={row.category}
-                                                onChange={e => updateFixed(row.id, { category: e.target.value })}
-                                            >
-                                                {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                            </select>
+                                            {renderCategoryPill(row.id, row.category, EXPENSE_CATEGORIES, c => updateFixed(row.id, { category: c }))}
                                             <input
                                                 className={styles.labelInput}
                                                 type="text"
