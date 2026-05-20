@@ -202,8 +202,8 @@ export default function MonthlyBudgetPage() {
         <div className={styles.page}>
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>Budget Planner</h1>
-                    <p className={styles.subtitle}>Plan your expected income and fixed expenses.</p>
+                    <h1 className="pageTitle">Budget Planner</h1>
+                    <p className="pageSubtitle">Plan your expected income and fixed expenses.</p>
                 </div>
                 <div className={styles.headerRight}>
                     <div className={styles.monthNavWrap} ref={pickerRef}>
@@ -256,7 +256,7 @@ export default function MonthlyBudgetPage() {
                     <section className={styles.card}>
                         <h2 className={styles.sectionTitleIncome}>
                             <Payments className={styles.sectionIcon} />
-                            INCOME
+                            Income
                         </h2>
                         <div className={styles.rows}>
                             {income.map(row => (

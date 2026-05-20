@@ -28,7 +28,7 @@ html, body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-hanken), Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -43,4 +43,16 @@ input, button, textarea, select {
 
 button {
   cursor: pointer;
+}
+
+.pageTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.pageSubtitle {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
 }

@@ -16,17 +16,6 @@
     flex-wrap: wrap;
 }
 
-.title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 0.25rem;
-}
-
-.subtitle {
-    font-size: 0.9375rem;
-    color: var(--text-muted);
-}
 
 .headerRight {
     display: flex;
@@ -232,7 +221,6 @@
     gap: 0.5rem;
     font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
     color: var(--primary);
     margin-bottom: 1.5rem;
 }
@@ -562,7 +550,6 @@
     font-size: 1rem;
     color: var(--text-muted);
     padding: 0.75rem 0;
-    font-style: italic;
 }
 
 /* Sticky summary bar */
@@ -600,11 +587,9 @@
 }
 
 .summaryLabel {
-    font-size: clamp(0.625rem, 0.9vw, 0.875rem);
+    font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.05em;
     color: var(--text-muted);
-    text-transform: uppercase;
 }
 
 .summaryIncome {

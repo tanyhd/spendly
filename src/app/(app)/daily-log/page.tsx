@@ -90,6 +90,7 @@ export default function DailyLogPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EntryForm>(emptyForm());
     const [saving, setSaving] = useState(false);
+    const [catDropOpen, setCatDropOpen] = useState(false);
 
     const todayInt = toDateInt(new Date());
     const weekDates = getWeekDates(weekStart);
@@ -98,11 +99,21 @@ export default function DailyLogPage() {
         setLoading(true);
         setAddingDate(null);
         setEditingId(null);
+        setCatDropOpen(false);
         fetch(`/api/daily-log?weekStart=${toDateInt(weekStart)}`)
             .then(r => r.ok ? r.json() : [])
             .then(setEntries)
             .finally(() => setLoading(false));
     }, [weekStart]);
+
+    useEffect(() => {
+        if (!catDropOpen) return;
+        function handleClick(e: MouseEvent) {
+            if (!(e.target as Element).closest('[data-cat-drop]')) setCatDropOpen(false);
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [catDropOpen]);
 
     function prevWeek() {
         setWeekStart(w => { const d = new Date(w); d.setDate(d.getDate() - 7); return d; });
@@ -173,14 +184,27 @@ export default function DailyLogPage() {
     function renderForm(form: EntryForm, setForm: (f: EntryForm) => void, onSave: () => void, onCancel: () => void, label: string) {
         return (
             <div className={styles.form}>
-                <select
-                    className={styles.catSelect}
-                    value={form.category}
-                    onChange={e => setForm({ ...form, category: e.target.value })}
-                    style={{ borderColor: CATEGORY_COLORS[form.category], color: CATEGORY_COLORS[form.category] }}
-                >
-                    {DAILY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className={styles.categoryWrap} data-cat-drop="true">
+                    <button
+                        className={cx(styles.categoryPill, catDropOpen && styles.categoryPillOpen)}
+                        onClick={() => setCatDropOpen(o => !o)}
+                    >
+                        {form.category}
+                    </button>
+                    {catDropOpen && (
+                        <div className={styles.categoryDropdown}>
+                            {DAILY_CATEGORIES.map(c => (
+                                <button
+                                    key={c}
+                                    className={cx(styles.categoryOption, form.category === c && styles.categoryOptionActive)}
+                                    onClick={() => { setForm({ ...form, category: c }); setCatDropOpen(false); }}
+                                >
+                                    {c}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 <div className={styles.amountWrap}>
                     <span className={styles.currency}>$</span>
                     <input
@@ -216,8 +240,8 @@ export default function DailyLogPage() {
             {/* Header */}
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>Daily Expense Log</h1>
-                    <p className={styles.subtitle}>Track your daily spending week by week.</p>
+                    <h1 className="pageTitle">Daily Expense Log</h1>
+                    <p className="pageSubtitle">Track your daily spending week by week.</p>
                 </div>
                 <div className={styles.weekNav}>
                     <button className={styles.weekNavBtn} onClick={prevWeek}>&#8249;</button>
@@ -251,7 +275,7 @@ export default function DailyLogPage() {
                                     {addingDate !== dateInt && editingId == null && (
                                         <button
                                             className={styles.addBtn}
-                                            onClick={() => { setAddingDate(dateInt); setAddForm(emptyForm()); setEditingId(null); }}
+                                            onClick={() => { setAddingDate(dateInt); setAddForm(emptyForm()); setEditingId(null); setCatDropOpen(false); }}
                                         >
                                             + Add
                                         </button>
@@ -288,7 +312,7 @@ export default function DailyLogPage() {
                                                 </div>
                                                 <span className={styles.entryAmt}>${fmt(entry.amount)}</span>
                                                 <div className={styles.entryActions}>
-                                                    <button className={styles.editBtn} onClick={() => { setEditingId(entry._id); setEditForm({ category: entry.category, amount: String(entry.amount), note: entry.note }); setAddingDate(null); }} title="Edit">✏</button>
+                                                    <button className={styles.editBtn} onClick={() => { setEditingId(entry._id); setEditForm({ category: entry.category, amount: String(entry.amount), note: entry.note }); setAddingDate(null); setCatDropOpen(false); }} title="Edit">✏</button>
                                                     <button className={styles.deleteEntryBtn} onClick={() => handleDelete(entry._id)} title="Delete"><Trash /></button>
                                                 </div>
                                             </div>
@@ -300,7 +324,7 @@ export default function DailyLogPage() {
 
                                 {/* Daily subtotal */}
                                 <div className={styles.dayFooter}>
-                                    <span className={styles.subtotalLabel}>DAILY SUBTOTAL</span>
+                                    <span className={styles.subtotalLabel}>Daily Subtotal</span>
                                     <span className={cx(styles.subtotalAmt, dayTotal > 0 && styles.subtotalAmtActive)}>
                                         ${fmt(dayTotal)}
                                     </span>
@@ -322,12 +346,12 @@ export default function DailyLogPage() {
                         <p className={styles.sidebarRange}>{fmtWeekRange(weekStart)}</p>
 
                         <div className={styles.totalBlock}>
-                            <span className={styles.totalLabel}>TOTAL SPENDING</span>
+                            <span className={styles.totalLabel}>Total Spending</span>
                             <span className={styles.totalAmt}>${fmt(weekTotal)}</span>
                         </div>
 
                         <div className={styles.catBreakdown}>
-                            <span className={styles.catBreakdownLabel}>CATEGORY BREAKDOWN</span>
+                            <span className={styles.catBreakdownLabel}>Category Breakdown</span>
                             {catSorted.length === 0 ? (
                                 <p className={styles.catEmpty}>No spending this week</p>
                             ) : catSorted.map(([cat, amt]) => {
