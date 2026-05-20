@@ -90,3 +90,34 @@ export async function upsertBudget(userId, year, month, data) {
         { upsert: true }
     );
 }
+
+export async function getWeekEntries(userId, weekStart, weekEnd) {
+    const db = await connectToDb();
+    return await db.collection('daily_entries')
+        .find({ userId: new ObjectId(userId), date: { $gte: weekStart, $lte: weekEnd } })
+        .sort({ date: 1, _id: 1 })
+        .toArray();
+}
+
+export async function createEntry(userId, data) {
+    const db = await connectToDb();
+    const doc = { userId: new ObjectId(userId), ...data, createdAt: new Date() };
+    const result = await db.collection('daily_entries').insertOne(doc);
+    return { ...doc, _id: result.insertedId };
+}
+
+export async function updateEntry(userId, id, patch) {
+    const db = await connectToDb();
+    return await db.collection('daily_entries').updateOne(
+        { _id: new ObjectId(id), userId: new ObjectId(userId) },
+        { $set: { ...patch, updatedAt: new Date() } }
+    );
+}
+
+export async function deleteEntry(userId, id) {
+    const db = await connectToDb();
+    return await db.collection('daily_entries').deleteOne({
+        _id: new ObjectId(id),
+        userId: new ObjectId(userId),
+    });
+}
