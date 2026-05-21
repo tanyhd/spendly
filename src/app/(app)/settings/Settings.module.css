@@ -1,0 +1,714 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1160px;
+    width: 100%;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* ── Tabs ── */
+.tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.tab {
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+
+.tab:hover {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.tabActive {
+    background: var(--primary);
+    color: #fff;
+}
+
+.tabActive:hover {
+    background: var(--primary);
+    color: #fff;
+    opacity: 0.9;
+}
+
+/* ── Cards ── */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.cardTitle {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.375rem;
+}
+
+.cardSubtitle {
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+}
+
+.cardTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.375rem;
+}
+
+/* ── Categories Tab ── */
+.catList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.catRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.catRow:last-child {
+    border-bottom: none;
+}
+
+.catDot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.catIconWrap {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.catName {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.catBuiltIn {
+
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+}
+
+.catNote {
+    color: var(--text-muted);
+    margin-top: 1rem;
+    font-style: italic;
+}
+
+/* ── Recurring Tab ── */
+.recurringList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 0.5rem;
+}
+
+.recurringRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    transition: opacity 0.2s;
+}
+
+.recurringRowInactive {
+    opacity: 0.45;
+}
+
+.toggle {
+    width: 2.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.toggle::after {
+    content: '';
+    position: absolute;
+    top: 0.15rem;
+    left: 0.15rem;
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.2s;
+}
+
+.toggleOn {
+    background: var(--success);
+}
+
+.toggleOn::after {
+    left: 1.15rem;
+}
+
+.typeBadge {
+
+    font-weight: 700;
+    border-radius: 9999px;
+    padding: 0.15rem 0.5rem;
+    flex-shrink: 0;
+}
+
+.typeBadgeIncome {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10B981;
+}
+
+.typeBadgeExpense {
+    background: rgba(239, 68, 68, 0.15);
+    color: #EF4444;
+}
+
+.recurringLabel {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recurringCategory {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.recurringAmount {
+    font-weight: 700;
+    color: var(--text);
+    flex-shrink: 0;
+}
+
+.recurringFreq {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    min-width: 2rem;
+}
+
+.recurringActions {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+}
+
+/* Inline form */
+.recurringForm {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.recurringFormRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.recurringFormActions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.typeToggle,
+.freqToggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: 0.125rem;
+    flex-shrink: 0;
+}
+
+.typeBtn,
+.freqBtn {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.typeBtnActive,
+.freqBtnActive {
+    background: var(--primary);
+    color: #fff;
+}
+
+.formInput,
+.formSelect {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text);
+    padding: 0.4rem 0.75rem;
+    transition: border-color 0.15s;
+    flex: 1;
+    min-width: 8rem;
+}
+
+.formInput:focus,
+.formSelect:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.formAmountWrap {
+    display: flex;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
+}
+
+.formAmountWrap:focus-within {
+    border-color: var(--primary);
+}
+
+.formCurrency {
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.formAmountInput {
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 0.4rem 0;
+    width: 6rem;
+}
+
+.formAmountInput:focus {
+    outline: none;
+}
+
+.formAmountInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.formAmountInput[type='number'] {
+    -moz-appearance: textfield;
+}
+
+/* ── Budget Targets Tab ── */
+.targetsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.targetRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.targetRow:last-child {
+    border-bottom: none;
+}
+
+.targetIconWrap {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.targetCatName {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.targetInputWrap {
+    display: flex;
+    align-items: center;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0 0.625rem;
+    transition: border-color 0.15s;
+}
+
+.targetInputWrap:focus-within {
+    border-color: var(--primary);
+}
+
+.targetCurrency {
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.targetInput {
+    background: none;
+    border: none;
+    color: var(--text);
+    padding: 0.375rem 0;
+    width: 7rem;
+    text-align: right;
+}
+
+.targetInput:focus {
+    outline: none;
+}
+
+.targetInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+
+.targetInput[type='number'] {
+    -moz-appearance: textfield;
+}
+
+.targetPerMonth {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    min-width: 3.5rem;
+}
+
+/* ── Preferences Tab ── */
+.prefGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.prefFieldGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.prefFieldGroup:last-child {
+    margin-bottom: 0;
+}
+
+.prefLabel {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.prefInput,
+.prefSelect {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    max-width: 24rem;
+    transition: border-color 0.15s;
+}
+
+.prefInput:focus,
+.prefSelect:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.radioGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.radioLabel {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.radioInput {
+    accent-color: var(--primary);
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+}
+
+/* ── Data Management Tab ── */
+.dataGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.clearMonthRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dangerCard {
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.dangerZone {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.dangerWarning {
+    color: var(--text-muted);
+}
+
+.dangerWarning strong {
+    color: #EF4444;
+}
+
+.clearAllRow {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.dangerInput {
+    background: var(--surface-2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 0.5rem;
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    width: 12rem;
+    transition: border-color 0.15s;
+}
+
+.dangerInput:focus {
+    outline: none;
+    border-color: #EF4444;
+}
+
+/* ── Shared Buttons ── */
+.addRowBtn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-muted);
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    width: 100%;
+    text-align: left;
+    margin-top: 0.5rem;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.addRowBtn:hover {
+    background: var(--surface-2);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.saveBtn {
+    padding: 0.4rem 1.25rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 9999px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.saveBtn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.saveBtn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.saveBtnSaved {
+    background: var(--success);
+}
+
+.saveItemBtn {
+    padding: 0.4rem 1.25rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 9999px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.saveItemBtn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.saveItemBtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.cancelBtn {
+    padding: 0.4rem 1.25rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    color: var(--text-muted);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.cancelBtn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.editBtn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    transition: background 0.15s, color 0.15s;
+}
+
+.editBtn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.deleteBtn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem 0.375rem;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+.deleteBtn:hover {
+    background: rgba(239, 68, 68, 0.12);
+    color: #EF4444;
+}
+
+.dangerBtn {
+    padding: 0.45rem 1.125rem;
+    background: none;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: 9999px;
+    color: #EF4444;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.dangerBtn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.dangerBtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.dangerBtnStrong {
+    padding: 0.45rem 1.125rem;
+    background: #EF4444;
+    border: none;
+    border-radius: 9999px;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+
+.dangerBtnStrong:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.dangerBtnStrong:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.emptyState {
+    color: var(--text-muted);
+    padding: 1.5rem 0;
+}
+
+.loading {
+    color: var(--text-muted);
+    padding: 2rem 0;
+}

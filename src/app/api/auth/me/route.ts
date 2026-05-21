@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { getSettings } from '@/services/mongodb';
 
 export async function GET(req: NextRequest) {
     try {
@@ -9,7 +10,9 @@ export async function GET(req: NextRequest) {
         }
 
         const payload = await verifyToken(token);
-        return NextResponse.json({ userId: payload.userId, name: payload.name, email: payload.email });
+        const settings = await getSettings(payload.userId);
+        const name = settings.displayName?.trim() || payload.name;
+        return NextResponse.json({ userId: payload.userId, name, email: payload.email });
     } catch {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

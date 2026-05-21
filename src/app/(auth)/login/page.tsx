@@ -34,7 +34,9 @@ export default function LoginPage() {
                 return;
             }
 
-            router.push('/dashboard');
+            const settings = await fetch('/api/settings').then(r => r.ok ? r.json() : null);
+            const defaultPage = settings?.defaultPage || 'dashboard';
+            router.push(`/${defaultPage}`);
         } catch {
             setError('Something went wrong. Please try again.');
         } finally {

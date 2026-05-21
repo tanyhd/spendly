@@ -141,3 +141,40 @@ export async function getRecentTransactions(userId, year, month, limit = 10) {
         .limit(limit)
         .toArray();
 }
+
+export async function getSettings(userId) {
+    const db = await connectToDb();
+    return await db.collection('user_settings').findOne({ userId: new ObjectId(userId) }) || {};
+}
+
+export async function upsertSettings(userId, patch) {
+    const db = await connectToDb();
+    await db.collection('user_settings').updateOne(
+        { userId: new ObjectId(userId) },
+        { $set: { ...patch, updatedAt: new Date() } },
+        { upsert: true }
+    );
+}
+
+export async function clearMonthData(userId, year, month) {
+    const db = await connectToDb();
+    const start = year * 10000 + month * 100 + 1;
+    const end = year * 10000 + month * 100 + 31;
+    await Promise.all([
+        db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId), date: { $gte: start, $lte: end } }),
+        db.collection('monthly_plans').deleteOne({ userId: new ObjectId(userId), year, month }),
+    ]);
+}
+
+export async function clearWeekData(userId, weekStart, weekEnd) {
+    const db = await connectToDb();
+    await db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId), date: { $gte: weekStart, $lte: weekEnd } });
+}
+
+export async function clearAllUserData(userId) {
+    const db = await connectToDb();
+    await Promise.all([
+        db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId) }),
+        db.collection('monthly_plans').deleteMany({ userId: new ObjectId(userId) }),
+    ]);
+}
