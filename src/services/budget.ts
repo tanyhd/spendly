@@ -2,9 +2,18 @@ import { getMonthEntries, getBudget, getRecentTransactions } from './mongodb';
 import { decryptAmount } from '@/lib/crypto';
 
 export type CategoryTotal = { category: string; total: number };
-
 export type BudgetRow = { label: string; amount: number; category: string; recurring?: boolean };
 export type BudgetData = { income: BudgetRow[]; fixedExpenses: BudgetRow[] } | null;
+
+export type MonthIncomeRow = { label: string; amount: number };
+export type MonthFixedRow = { label: string; amount: number };
+export type MonthVariableRow = { category: string; total: number };
+export type MonthData = {
+    income: MonthIncomeRow[];
+    fixedExpenses: MonthFixedRow[];
+    variable: MonthVariableRow[];
+};
+export type AnnualData = { months: MonthData[] };
 
 export async function getMonthVariableTotals(
     userId: string,
@@ -93,7 +102,6 @@ export async function getBudgetForMonth(
         };
     }
 
-    // Carry forward from previous month
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear  = month === 1 ? year - 1 : year;
     const prev = await getBudget(userId, prevYear, prevMonth);
@@ -111,4 +119,34 @@ export async function getBudgetForMonth(
     if (income.length === 0 && fixedExpenses.length === 0) return null;
 
     return { income, fixedExpenses };
+}
+
+export async function getAnnualData(userId: string, year: number): Promise<AnnualData> {
+    const months = await Promise.all(
+        Array.from({ length: 12 }, (_, i) => i + 1).map(async (month) => {
+            const [budget, entries] = await Promise.all([
+                getBudget(userId, year, month),
+                getMonthEntries(userId, year, month),
+            ]);
+
+            const income: MonthIncomeRow[] = budget?.income
+                ? budget.income.map((r: any) => ({ label: r.label, amount: decryptAmount(r.amount) }))
+                : [];
+
+            const fixedExpenses: MonthFixedRow[] = budget?.fixedExpenses
+                ? budget.fixedExpenses.map((r: any) => ({ label: r.label, amount: decryptAmount(r.amount) }))
+                : [];
+
+            const varTotals: Record<string, number> = {};
+            for (const e of entries) {
+                varTotals[e.category] = (varTotals[e.category] ?? 0) + decryptAmount(e.amount);
+            }
+            const variable: MonthVariableRow[] = Object.entries(varTotals)
+                .map(([category, total]) => ({ category, total }));
+
+            return { income, fixedExpenses, variable };
+        })
+    );
+
+    return { months };
 }

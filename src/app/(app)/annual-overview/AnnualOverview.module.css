@@ -1,0 +1,257 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1160px;
+    width: 100%;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+
+.exportBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 1.125rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 9999px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+}
+
+.exportBtn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.exportBtn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Chart card */
+.chartCard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    position: relative;
+}
+
+.chartCardHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.chartTitle {
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.chartTotal {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.chartTotalLabel {
+    color: var(--text-muted);
+}
+
+.chartTotalValue {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.chartTotalPositive {
+    color: #34D399;
+}
+
+.chartTotalNegative {
+    color: #EF4444;
+}
+
+.chartEmpty {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Table card */
+.tableCard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+.tableWrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 70vh;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.tableWrap::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.tableWrap::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 9999px;
+}
+
+.tableWrap::-webkit-scrollbar-thumb:hover {
+    background: #3D3B5A;
+}
+
+.tableWrap::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+/* Header row */
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface-2);
+    padding: 0.625rem 0.75rem;
+    text-align: right;
+    white-space: nowrap;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.table thead th:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    min-width: 11rem;
+    max-width: 11rem;
+    width: 11rem;
+}
+
+.table thead th.totalCol {
+    color: var(--text);
+    border-left: 1px solid var(--border);
+}
+
+/* Data cells */
+.table tbody td {
+    padding: 0.5rem 0.75rem;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    min-width: 6rem;
+}
+
+.table tbody td:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: var(--surface);
+    min-width: 11rem;
+    max-width: 11rem;
+    width: 11rem;
+    border-right: 1px solid var(--border);
+    font-weight: 500;
+    color: var(--text);
+}
+
+.table tbody td.totalCol {
+    border-left: 1px solid var(--border);
+    font-weight: 600;
+}
+
+/* Section header rows */
+.sectionRow td {
+    background: var(--surface-2) !important;
+    color: var(--text-muted);
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.sectionRow td:first-child {
+    border-right: none;
+}
+
+/* Total rows */
+.totalRow td {
+    background: var(--surface-2) !important;
+    font-weight: 700;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.totalRow td:first-child {
+    background: var(--surface-2) !important;
+}
+
+/* Purple total row values */
+.totalValue {
+    color: var(--primary) !important;
+}
+
+/* Muted zero/dash values */
+.zero {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* Positive/negative savings */
+.positive {
+    color: #34D399;
+    font-weight: 600;
+}
+
+.negative {
+    color: #EF4444;
+    font-weight: 600;
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+}
