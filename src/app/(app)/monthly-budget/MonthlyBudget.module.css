@@ -540,6 +540,46 @@
     padding: 0.75rem 0;
 }
 
+.varRows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-bottom: 0.25rem;
+}
+
+.varRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.varRowLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.varIconWrap {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.varCatName {
+    color: var(--text);
+}
+
+.varAmt {
+    font-weight: 600;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
 /* Sticky summary bar */
 .summaryBar {
     position: fixed;

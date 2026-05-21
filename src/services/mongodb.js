@@ -121,3 +121,12 @@ export async function deleteEntry(userId, id) {
         userId: new ObjectId(userId),
     });
 }
+
+export async function getMonthEntries(userId, year, month) {
+    const db = await connectToDb();
+    const start = year * 10000 + month * 100 + 1;
+    const end = year * 10000 + month * 100 + 31;
+    return await db.collection('daily_entries')
+        .find({ userId: new ObjectId(userId), date: { $gte: start, $lte: end } })
+        .toArray();
+}

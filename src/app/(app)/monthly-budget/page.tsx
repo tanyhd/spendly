@@ -8,6 +8,36 @@ import Bank from '@/common/icons/Bank';
 import DailyLog from '@/common/icons/DailyLog';
 import Recurring from '@/common/icons/Recurring';
 import Trash from '@/common/icons/Trash';
+import FoodDining from '@/common/icons/FoodDining';
+import TransportCar from '@/common/icons/TransportCar';
+import ShoppingBag from '@/common/icons/ShoppingBag';
+import HealthHeart from '@/common/icons/HealthHeart';
+import EntertainmentIcon from '@/common/icons/EntertainmentIcon';
+import EducationBook from '@/common/icons/EducationBook';
+import UtilitiesBolt from '@/common/icons/UtilitiesBolt';
+import OthersGrid from '@/common/icons/OthersGrid';
+
+const CATEGORY_COLORS: Record<string, string> = {
+    Food: '#F59E0B',
+    Transport: '#3B82F6',
+    Shopping: '#EC4899',
+    Health: '#EF4444',
+    Entertainment: '#8B5CF6',
+    Education: '#06B6D4',
+    Utilities: '#F97316',
+    Others: '#6B7280',
+};
+
+const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
+    Food: FoodDining,
+    Transport: TransportCar,
+    Shopping: ShoppingBag,
+    Health: HealthHeart,
+    Entertainment: EntertainmentIcon,
+    Education: EducationBook,
+    Utilities: UtilitiesBolt,
+    Others: OthersGrid,
+};
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -19,6 +49,7 @@ const EXPENSE_CATEGORIES = ['Housing', 'Tax', 'Insurance', 'Education', 'Family'
 
 type IncomeRow = { id: string; label: string; amount: string; category: string };
 type FixedRow = { id: string; label: string; amount: string; recurring: boolean; category: string };
+type VarEntry = { category: string; total: number };
 
 function makeIncomeDefaults(): IncomeRow[] {
     return [
@@ -60,6 +91,7 @@ export default function MonthlyBudgetPage() {
     const [income, setIncome] = useState<IncomeRow[]>(makeIncomeDefaults());
     const [fixed, setFixed] = useState<FixedRow[]>(makeExpenseDefaults());
     const [loading, setLoading] = useState(true);
+    const [variableExpenses, setVariableExpenses] = useState<VarEntry[]>([]);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
@@ -93,26 +125,27 @@ export default function MonthlyBudgetPage() {
     useEffect(() => {
         setLoading(true);
         setSaved(false);
-        fetch(`/api/budget/${year}/${month}`)
-            .then(res => (res.ok ? res.json() : null))
-            .then(data => {
-                if (data) {
-                    if (Array.isArray(data.income) && data.income.length > 0) {
-                        setIncome(data.income.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
-                    } else {
-                        setIncome(makeIncomeDefaults());
-                    }
-                    if (Array.isArray(data.fixedExpenses) && data.fixedExpenses.length > 0) {
-                        setFixed(data.fixedExpenses.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
-                    } else {
-                        setFixed(makeExpenseDefaults());
-                    }
+        Promise.all([
+            fetch(`/api/budget/${year}/${month}`).then(r => r.ok ? r.json() : null),
+            fetch(`/api/daily-log/month/${year}/${month}`).then(r => r.ok ? r.json() : []),
+        ]).then(([data, varData]) => {
+            if (data) {
+                if (Array.isArray(data.income) && data.income.length > 0) {
+                    setIncome(data.income.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
                 } else {
                     setIncome(makeIncomeDefaults());
+                }
+                if (Array.isArray(data.fixedExpenses) && data.fixedExpenses.length > 0) {
+                    setFixed(data.fixedExpenses.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
+                } else {
                     setFixed(makeExpenseDefaults());
                 }
-            })
-            .finally(() => setLoading(false));
+            } else {
+                setIncome(makeIncomeDefaults());
+                setFixed(makeExpenseDefaults());
+            }
+            setVariableExpenses(Array.isArray(varData) ? varData : []);
+        }).finally(() => setLoading(false));
     }, [year, month]);
 
     function prevMonth() {
@@ -146,7 +179,9 @@ export default function MonthlyBudgetPage() {
     }
 
     const totalIncome = income.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const totalExpenses = fixed.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const totalFixed = fixed.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const totalVariable = variableExpenses.reduce((s, r) => s + r.total, 0);
+    const totalExpenses = totalFixed + totalVariable;
     const netSavings = totalIncome - totalExpenses;
     const savingsPercent = totalIncome > 0
         ? Math.max(0, Math.min(100, Math.round((netSavings / totalIncome) * 100)))
@@ -359,9 +394,27 @@ export default function MonthlyBudgetPage() {
                                 </h2>
                                 <span className={styles.badge}>Auto-pulled from Daily Log</span>
                             </div>
-                            <p className={styles.variableEmpty}>
-                                Variable expenses will appear here once the Daily Log is set up.
-                            </p>
+                            {variableExpenses.length === 0 ? (
+                                <p className={styles.variableEmpty}>No daily log entries for this month yet.</p>
+                            ) : (
+                                <div className={styles.varRows}>
+                                    {variableExpenses.map(({ category, total }) => {
+                                        const Icon = CATEGORY_ICONS[category] ?? OthersGrid;
+                                        const color = CATEGORY_COLORS[category] ?? '#6B7280';
+                                        return (
+                                            <div key={category} className={styles.varRow}>
+                                                <div className={styles.varRowLeft}>
+                                                    <span className={styles.varIconWrap} style={{ background: `${color}22` }}>
+                                                        <Icon width="16" height="16" style={{ color }} />
+                                                    </span>
+                                                    <span className={styles.varCatName}>{category}</span>
+                                                </div>
+                                                <span className={styles.varAmt}>${fmt(total)}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                             <div className={styles.totalRow}>
                                 <span className={styles.totalLabel}>Total Expenses</span>
                                 <span className={styles.totalExpense}>${fmt(totalExpenses)}</span>
