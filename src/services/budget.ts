@@ -53,10 +53,7 @@ export async function getBudgetForMonth(
         : [];
 
     const fixedExpenses: BudgetRow[] = Array.isArray(prev.fixedExpenses)
-        ? prev.fixedExpenses.map((r: any) => ({
-            ...r,
-            amount: r.recurring ? decryptAmount(r.amount) : 0,
-          }))
+        ? prev.fixedExpenses.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
         : [];
 
     if (income.length === 0 && fixedExpenses.length === 0) return null;

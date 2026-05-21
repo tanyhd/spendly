@@ -466,29 +466,6 @@
     opacity: 0.4;
 }
 
-.recurringBtn {
-    width: 1.625rem;
-    height: 1.625rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s;
-    flex-shrink: 0;
-}
-
-.recurringBtn:hover {
-    opacity: 0.75;
-}
-
-.recurringOn {
-    color: var(--text);
-}
-
 .totalRow {
     display: flex;
     align-items: center;

@@ -6,7 +6,6 @@ import styles from './MonthlyBudget.module.css';
 import Payments from '@/common/icons/Payments';
 import Bank from '@/common/icons/Bank';
 import DailyLog from '@/common/icons/DailyLog';
-import Recurring from '@/common/icons/Recurring';
 import Trash from '@/common/icons/Trash';
 import FoodDining from '@/common/icons/FoodDining';
 import TransportCar from '@/common/icons/TransportCar';
@@ -48,7 +47,7 @@ const INCOME_CATEGORIES = ['Employment', 'Investment', 'Business', 'Other'] as c
 const EXPENSE_CATEGORIES = ['Housing', 'Tax', 'Insurance', 'Education', 'Family', 'Other'] as const;
 
 type IncomeRow = { id: string; label: string; amount: string; category: string };
-type FixedRow = { id: string; label: string; amount: string; recurring: boolean; category: string };
+type FixedRow = { id: string; label: string; amount: string; category: string };
 type VarEntry = { category: string; total: number };
 
 function makeIncomeDefaults(): IncomeRow[] {
@@ -65,12 +64,12 @@ function makeIncomeDefaults(): IncomeRow[] {
 
 function makeExpenseDefaults(): FixedRow[] {
     return [
-        { id: uid(), label: 'Utilities & Bills', amount: '', recurring: false, category: 'Housing' },
-        { id: uid(), label: 'Taxes', amount: '', recurring: false, category: 'Tax' },
-        { id: uid(), label: 'Insurance', amount: '', recurring: false, category: 'Insurance' },
-        { id: uid(), label: 'School', amount: '', recurring: false, category: 'Education' },
-        { id: uid(), label: 'Family', amount: '', recurring: false, category: 'Family' },
-        { id: uid(), label: 'Misc', amount: '', recurring: false, category: 'Other' },
+        { id: uid(), label: 'Utilities & Bills', amount: '', category: 'Housing' },
+        { id: uid(), label: 'Taxes', amount: '', category: 'Tax' },
+        { id: uid(), label: 'Insurance', amount: '', category: 'Insurance' },
+        { id: uid(), label: 'School', amount: '', category: 'Education' },
+        { id: uid(), label: 'Family', amount: '', category: 'Family' },
+        { id: uid(), label: 'Misc', amount: '', category: 'Other' },
     ];
 }
 
@@ -169,7 +168,7 @@ export default function MonthlyBudgetPage() {
     }
 
     function addFixedRow() {
-        setFixed(prev => [...prev, { id: uid(), label: '', amount: '', recurring: false, category: 'Other' }]);
+        setFixed(prev => [...prev, { id: uid(), label: '', amount: '', category: 'Other' }]);
     }
     function updateFixed(id: string, patch: Partial<FixedRow>) {
         setFixed(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
@@ -195,7 +194,7 @@ export default function MonthlyBudgetPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     income: income.map(({ id: _id, ...r }) => ({ ...r, amount: parseFloat(r.amount) || 0 })),
-                    fixedExpenses: fixed.map(({ id: _id, ...r }) => ({ ...r, amount: parseFloat(r.amount) || 0 })),
+                    fixedExpenses: fixed.map(({ id: _id, ...r }) => ({ label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 })),
                 }),
             });
             if (res.ok) {
@@ -345,14 +344,6 @@ export default function MonthlyBudgetPage() {
                                 {fixed.map(row => (
                                     <div key={row.id} className={styles.row}>
                                         <div className={styles.rowMain}>
-                                            <button
-                                                type="button"
-                                                className={cx(styles.recurringBtn, row.recurring && styles.recurringOn)}
-                                                onClick={() => updateFixed(row.id, { recurring: !row.recurring })}
-                                                title={row.recurring ? 'Recurring — click to disable' : 'Set as recurring'}
-                                            >
-                                                <Recurring />
-                                            </button>
                                             {renderCategoryPill(row.id, row.category, EXPENSE_CATEGORIES, c => updateFixed(row.id, { category: c }))}
                                             <input
                                                 className={styles.labelInput}
