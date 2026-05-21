@@ -1,4 +1,4 @@
-import { getMonthEntries, getBudget } from './mongodb';
+import { getMonthEntries, getBudget, getRecentTransactions } from './mongodb';
 import { decryptAmount } from '@/lib/crypto';
 
 export type CategoryTotal = { category: string; total: number };
@@ -21,6 +21,58 @@ export async function getMonthVariableTotals(
     return Object.entries(totals)
         .map(([category, total]) => ({ category, total }))
         .sort((a, b) => b.total - a.total);
+}
+
+export type Transaction = { _id: string; date: number; category: string; note: string; amount: number };
+
+export type DashboardData = {
+    totalIncome: number;
+    totalFixed: number;
+    totalVariable: number;
+    expensesByCategory: CategoryTotal[];
+    recentTransactions: Transaction[];
+};
+
+export async function getDashboardData(
+    userId: string,
+    year: number,
+    month: number
+): Promise<DashboardData> {
+    const [budget, allEntries, recentRaw] = await Promise.all([
+        getBudgetForMonth(userId, year, month),
+        getMonthEntries(userId, year, month),
+        getRecentTransactions(userId, year, month, 10),
+    ]);
+
+    const totalIncome = (budget?.income ?? []).reduce((s: number, r: BudgetRow) => s + r.amount, 0);
+
+    const catTotals: Record<string, number> = {};
+    let totalFixed = 0;
+    for (const r of budget?.fixedExpenses ?? []) {
+        catTotals[r.category] = (catTotals[r.category] ?? 0) + r.amount;
+        totalFixed += r.amount;
+    }
+
+    let totalVariable = 0;
+    for (const e of allEntries) {
+        const amt = decryptAmount(e.amount);
+        catTotals[e.category] = (catTotals[e.category] ?? 0) + amt;
+        totalVariable += amt;
+    }
+
+    const expensesByCategory = Object.entries(catTotals)
+        .map(([category, total]) => ({ category, total }))
+        .sort((a, b) => b.total - a.total);
+
+    const recentTransactions = recentRaw.map((e: any) => ({
+        _id: e._id.toString(),
+        date: e.date,
+        category: e.category,
+        note: e.note ?? '',
+        amount: decryptAmount(e.amount),
+    }));
+
+    return { totalIncome, totalFixed, totalVariable, expensesByCategory, recentTransactions };
 }
 
 export async function getBudgetForMonth(

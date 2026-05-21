@@ -130,3 +130,14 @@ export async function getMonthEntries(userId, year, month) {
         .find({ userId: new ObjectId(userId), date: { $gte: start, $lte: end } })
         .toArray();
 }
+
+export async function getRecentTransactions(userId, year, month, limit = 10) {
+    const db = await connectToDb();
+    const start = year * 10000 + month * 100 + 1;
+    const end = year * 10000 + month * 100 + 31;
+    return await db.collection('daily_entries')
+        .find({ userId: new ObjectId(userId), date: { $gte: start, $lte: end } })
+        .sort({ date: -1, _id: -1 })
+        .limit(limit)
+        .toArray();
+}
