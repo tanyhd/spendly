@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import cx from 'classnames';
 import styles from './MonthlyBudget.module.css';
 import Payments from '@/common/icons/Payments';
@@ -9,11 +9,7 @@ import DailyLog from '@/common/icons/DailyLog';
 import Trash from '@/common/icons/Trash';
 import OthersGrid from '@/common/icons/OthersGrid';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
-
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-];
+import MonthPicker from '@/common/components/MonthPicker';
 
 const INCOME_CATEGORIES = ['Employment', 'Investment', 'Business', 'Other'] as const;
 const EXPENSE_CATEGORIES = ['Housing', 'Tax', 'Insurance', 'Education', 'Family', 'Other'] as const;
@@ -66,9 +62,6 @@ export default function MonthlyBudgetPage() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
-    const [pickerOpen, setPickerOpen] = useState(false);
-    const [pickerYear, setPickerYear] = useState(year);
-    const pickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!openCategoryId) return;
@@ -80,18 +73,6 @@ export default function MonthlyBudgetPage() {
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, [openCategoryId]);
-
-    useEffect(() => {
-        if (!pickerOpen) return;
-        setPickerYear(year);
-        function handleClick(e: MouseEvent) {
-            if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-                setPickerOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [pickerOpen, year]);
 
     useEffect(() => {
         setLoading(true);
@@ -212,38 +193,11 @@ export default function MonthlyBudgetPage() {
                     <p className="pageSubtitle">Plan your expected income and fixed expenses.</p>
                 </div>
                 <div className={styles.headerRight}>
-                    <div className={styles.monthNavWrap} ref={pickerRef}>
-                        <div className={styles.monthNav}>
-                            <button className={styles.monthNavBtn} onClick={prevMonth}>&#8249;</button>
-                            <button className={styles.monthLabel} onClick={() => setPickerOpen(o => !o)}>
-                                {MONTHS[month - 1]} {year}
-                            </button>
-                            <button className={styles.monthNavBtn} onClick={nextMonth}>&#8250;</button>
-                        </div>
-                        {pickerOpen && (
-                            <div className={styles.picker}>
-                                <div className={styles.pickerYearRow}>
-                                    <button className={styles.pickerYearBtn} onClick={() => setPickerYear(y => y - 1)}>&#8249;</button>
-                                    <span className={styles.pickerYear}>{pickerYear}</span>
-                                    <button className={styles.pickerYearBtn} onClick={() => setPickerYear(y => y + 1)}>&#8250;</button>
-                                </div>
-                                <div className={styles.pickerGrid}>
-                                    {MONTHS.map((m, i) => (
-                                        <button
-                                            key={m}
-                                            className={cx(
-                                                styles.pickerMonth,
-                                                pickerYear === year && i + 1 === month && styles.pickerMonthActive
-                                            )}
-                                            onClick={() => { setYear(pickerYear); setMonth(i + 1); setPickerOpen(false); }}
-                                        >
-                                            {m.slice(0, 3)}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <MonthPicker
+                        year={year}
+                        month={month}
+                        onChange={(y, m) => { setYear(y); setMonth(m); }}
+                    />
                     <button
                         className={cx(styles.saveBtn, saved && styles.saveBtnSaved)}
                         onClick={handleSave}

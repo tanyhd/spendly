@@ -8,6 +8,7 @@ import styles from './Dashboard.module.css';
 import type { DashboardData } from '@/services/budget';
 import OthersGrid from '@/common/icons/OthersGrid';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
+import MonthPicker from '@/common/components/MonthPicker';
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -49,15 +50,6 @@ export default function DashboardPage() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
 
-    function prevMonth() {
-        if (month === 1) { setYear(y => y - 1); setMonth(12); }
-        else setMonth(m => m - 1);
-    }
-    function nextMonth() {
-        if (month === 12) { setYear(y => y + 1); setMonth(1); }
-        else setMonth(m => m + 1);
-    }
-
     useEffect(() => {
         setLoading(true);
         fetch(`/api/dashboard/${year}/${month}`)
@@ -91,11 +83,11 @@ export default function DashboardPage() {
                     <h1 className="pageTitle">Dashboard</h1>
                     <p className="pageSubtitle">Your financial overview for {MONTHS[month - 1]} {year}.</p>
                 </div>
-                <div className={styles.monthNav}>
-                    <button className={styles.monthNavBtn} onClick={prevMonth}>&#8249;</button>
-                    <span className={styles.monthLabel}>{MONTHS[month - 1]} {year}</span>
-                    <button className={styles.monthNavBtn} onClick={nextMonth}>&#8250;</button>
-                </div>
+                <MonthPicker
+                    year={year}
+                    month={month}
+                    onChange={(y, m) => { setYear(y); setMonth(m); }}
+                />
             </div>
 
             {loading ? (
@@ -200,8 +192,10 @@ export default function DashboardPage() {
                                                     <Icon width="18" height="18" style={{ color }} />
                                                 </div>
                                                 <div className={styles.txInfo}>
-                                                    <div className={styles.txName}>{tx.note || tx.category}</div>
-                                                    <div className={styles.txMeta}>{formatDateInt(tx.date)} &bull; {tx.category}</div>
+                                                    <div className={styles.txName}>{tx.category}</div>
+                                                    <div className={styles.txMeta}>
+                                                        {formatDateInt(tx.date)}{tx.note ? ` · ${tx.note}` : ''}
+                                                    </div>
                                                 </div>
                                                 <span className={styles.txAmt}>-${fmt(tx.amount)}</span>
                                             </div>
