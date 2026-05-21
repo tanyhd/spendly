@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
   --bg: #0D0C14;
@@ -28,6 +28,7 @@ html, body {
 body {
   background: var(--bg);
   color: var(--text);
+  font-size: 1rem;
   font-family: var(--font-hanken), Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -53,6 +54,5 @@ button {
 }
 
 .pageSubtitle {
-  font-size: 0.9375rem;
   color: var(--text-muted);
 }

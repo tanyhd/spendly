@@ -12,6 +12,8 @@ import EducationBook from '@/common/icons/EducationBook';
 import UtilitiesBolt from '@/common/icons/UtilitiesBolt';
 import OthersGrid from '@/common/icons/OthersGrid';
 import AnnualOverview from '@/common/icons/AnnualOverview';
+import ChevronDown from '@/common/icons/ChevronDown';
+import ChevronUp from '@/common/icons/ChevronUp';
 import styles from './DailyLog.module.css';
 
 const DAILY_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Education', 'Utilities', 'Others'] as const;
@@ -91,6 +93,7 @@ export default function DailyLogPage() {
     const [editForm, setEditForm] = useState<EntryForm>(emptyForm());
     const [saving, setSaving] = useState(false);
     const [catDropOpen, setCatDropOpen] = useState(false);
+    const [catSearch, setCatSearch] = useState('');
 
     const todayInt = toDateInt(new Date());
     const weekDates = getWeekDates(weekStart);
@@ -136,6 +139,7 @@ export default function DailyLogPage() {
                 setEntries(prev => [...prev, entry]);
                 setAddForm(emptyForm());
                 setAddingDate(null);
+                setCatSearch('');
             }
         } finally {
             setSaving(false);
@@ -158,6 +162,8 @@ export default function DailyLogPage() {
                         : e
                 ));
                 setEditingId(null);
+                setCatDropOpen(false);
+                setCatSearch('');
             }
         } finally {
             setSaving(false);
@@ -177,63 +183,13 @@ export default function DailyLogPage() {
     }
 
     const weekTotal = entries.reduce((s, e) => s + e.amount, 0);
+    const SelectedCatIcon = CATEGORY_ICONS[addForm.category] ?? OthersGrid;
+    const selectedCatColor = CATEGORY_COLORS[addForm.category] ?? '#6B7280';
+    const SelectedEditCatIcon = CATEGORY_ICONS[editForm.category] ?? OthersGrid;
+    const selectedEditCatColor = CATEGORY_COLORS[editForm.category] ?? '#6B7280';
     const catSorted = Object.entries(
         entries.reduce((acc, e) => { acc[e.category] = (acc[e.category] || 0) + e.amount; return acc; }, {} as Record<string, number>)
     ).sort((a, b) => b[1] - a[1]);
-
-    function renderForm(form: EntryForm, setForm: (f: EntryForm) => void, onSave: () => void, onCancel: () => void, label: string) {
-        return (
-            <div className={styles.form}>
-                <div className={styles.categoryWrap} data-cat-drop="true">
-                    <button
-                        className={cx(styles.categoryPill, catDropOpen && styles.categoryPillOpen)}
-                        onClick={() => setCatDropOpen(o => !o)}
-                    >
-                        {form.category}
-                    </button>
-                    {catDropOpen && (
-                        <div className={styles.categoryDropdown}>
-                            {DAILY_CATEGORIES.map(c => (
-                                <button
-                                    key={c}
-                                    className={cx(styles.categoryOption, form.category === c && styles.categoryOptionActive)}
-                                    onClick={() => { setForm({ ...form, category: c }); setCatDropOpen(false); }}
-                                >
-                                    {c}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <div className={styles.amountWrap}>
-                    <span className={styles.currency}>$</span>
-                    <input
-                        className={styles.amountInput}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={form.amount}
-                        onKeyDown={blockInvalid}
-                        onChange={e => setForm({ ...form, amount: e.target.value })}
-                        autoFocus
-                    />
-                </div>
-                <input
-                    className={styles.noteInput}
-                    type="text"
-                    placeholder="Note (optional)"
-                    value={form.note}
-                    onChange={e => setForm({ ...form, note: e.target.value })}
-                    onKeyDown={e => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel(); }}
-                />
-                <div className={styles.formBtns}>
-                    <button className={styles.saveBtn} onClick={onSave} disabled={saving || !form.amount}>{saving ? '...' : label}</button>
-                    <button className={styles.cancelBtn} onClick={onCancel}>Cancel</button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className={styles.page}>
@@ -272,14 +228,12 @@ export default function DailyLogPage() {
                                         <span className={styles.dayDate}>{dayDate}</span>
                                         {isToday && <span className={styles.todayPill}>Today</span>}
                                     </div>
-                                    {addingDate !== dateInt && editingId == null && (
-                                        <button
-                                            className={styles.addBtn}
-                                            onClick={() => { setAddingDate(dateInt); setAddForm(emptyForm()); setEditingId(null); setCatDropOpen(false); }}
-                                        >
-                                            + Add
-                                        </button>
-                                    )}
+                                    <button
+                                        className={styles.addBtn}
+                                        onClick={() => { setAddingDate(dateInt); setAddForm(emptyForm()); setEditingId(null); setCatDropOpen(false); setCatSearch(''); }}
+                                    >
+                                        + Add
+                                    </button>
                                 </div>
 
                                 {/* Entries */}
@@ -294,16 +248,9 @@ export default function DailyLogPage() {
                                     {dayEntries.map(entry => {
                                         const Icon = CATEGORY_ICONS[entry.category] ?? OthersGrid;
                                         const color = CATEGORY_COLORS[entry.category] ?? '#6B7280';
-                                        return editingId === entry._id ? (
-                                            <div key={entry._id} className={styles.editWrap}>
-                                                {renderForm(editForm, setEditForm, handleUpdate, () => setEditingId(null), 'Save')}
-                                            </div>
-                                        ) : (
+                                        return (
                                             <div key={entry._id} className={styles.entry}>
-                                                <div
-                                                    className={styles.entryIconWrap}
-                                                    style={{ background: `${color}20` }}
-                                                >
+                                                <div className={styles.entryIconWrap} style={{ background: `${color}20` }}>
                                                     <Icon style={{ color }} width="18" height="18" />
                                                 </div>
                                                 <div className={styles.entryInfo}>
@@ -312,14 +259,13 @@ export default function DailyLogPage() {
                                                 </div>
                                                 <span className={styles.entryAmt}>${fmt(entry.amount)}</span>
                                                 <div className={styles.entryActions}>
-                                                    <button className={styles.editBtn} onClick={() => { setEditingId(entry._id); setEditForm({ category: entry.category, amount: String(entry.amount), note: entry.note }); setAddingDate(null); setCatDropOpen(false); }} title="Edit">✏</button>
+                                                    <button className={styles.editBtn} onClick={() => { setEditingId(entry._id); setEditForm({ category: entry.category, amount: String(entry.amount), note: entry.note }); setAddingDate(null); setCatDropOpen(false); setCatSearch(''); }} title="Edit">✏</button>
                                                     <button className={styles.deleteEntryBtn} onClick={() => handleDelete(entry._id)} title="Delete"><Trash /></button>
                                                 </div>
                                             </div>
                                         );
                                     })}
 
-                                    {addingDate === dateInt && renderForm(addForm, setAddForm, handleAdd, () => setAddingDate(null), 'Add')}
                                 </div>
 
                                 {/* Daily subtotal */}
@@ -371,6 +317,200 @@ export default function DailyLogPage() {
                     </aside>
                 )}
             </div>
+
+            {/* Edit Transaction Modal */}
+            {editingId !== null && (
+                <div className={styles.modalOverlay} onMouseDown={() => { setEditingId(null); setCatDropOpen(false); }}>
+                    <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
+                        <h2 className={styles.modalTitle}>Edit Transaction</h2>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Amount</label>
+                            <div className={styles.modalAmountWrap}>
+                                <span className={styles.modalCurrency}>$</span>
+                                <input
+                                    className={styles.modalAmountInput}
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={editForm.amount}
+                                    onKeyDown={blockInvalid}
+                                    onChange={e => setEditForm({ ...editForm, amount: e.target.value })}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Category</label>
+                            <div className={styles.catSelector} data-cat-drop="true">
+                                <button
+                                    className={cx(styles.catSelectorBtn, catDropOpen && styles.catSelectorBtnOpen)}
+                                    onClick={() => setCatDropOpen(o => !o)}
+                                >
+                                    <div className={styles.catSelectorLeft}>
+                                        <div className={styles.catSelectorIcon} style={{ background: `${selectedEditCatColor}20` }}>
+                                            <SelectedEditCatIcon style={{ color: selectedEditCatColor }} width="16" height="16" />
+                                        </div>
+                                        <span className={styles.catSelectorName}>{editForm.category}</span>
+                                    </div>
+                                    <span className={styles.catChevron}>{catDropOpen ? <ChevronUp width="18" height="18" /> : <ChevronDown width="18" height="18" />}</span>
+                                </button>
+                                {catDropOpen && (
+                                    <div className={styles.catList}>
+                                        <div className={styles.catSearchWrap}>
+                                            <input
+                                                className={styles.catSearchInput}
+                                                placeholder="Search categories..."
+                                                value={catSearch}
+                                                onChange={e => setCatSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className={styles.catListItems}>
+                                            {DAILY_CATEGORIES
+                                                .filter(c => c.toLowerCase().includes(catSearch.toLowerCase()))
+                                                .map(c => {
+                                                    const CatIcon = CATEGORY_ICONS[c] ?? OthersGrid;
+                                                    const catColor = CATEGORY_COLORS[c] ?? '#6B7280';
+                                                    return (
+                                                        <button
+                                                            key={c}
+                                                            className={cx(styles.catListItem, editForm.category === c && styles.catListItemActive)}
+                                                            onClick={() => { setEditForm({ ...editForm, category: c }); setCatDropOpen(false); setCatSearch(''); }}
+                                                        >
+                                                            <div className={styles.catListIcon} style={{ background: `${catColor}20` }}>
+                                                                <CatIcon style={{ color: catColor }} width="14" height="14" />
+                                                            </div>
+                                                            <span className={styles.catListName}>{c}</span>
+                                                            {editForm.category === c && <span className={styles.catCheck}>✓</span>}
+                                                        </button>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Note</label>
+                            <input
+                                className={styles.modalNoteInput}
+                                type="text"
+                                placeholder="Optional"
+                                value={editForm.note}
+                                onChange={e => setEditForm({ ...editForm, note: e.target.value })}
+                                onKeyDown={e => { if (e.key === 'Enter') handleUpdate(); if (e.key === 'Escape') { setEditingId(null); setCatDropOpen(false); } }}
+                            />
+                        </div>
+
+                        <div className={styles.modalBtns}>
+                            <button className={styles.modalCancelBtn} onClick={() => { setEditingId(null); setCatDropOpen(false); }}>Cancel</button>
+                            <button className={styles.modalAddBtn} onClick={handleUpdate} disabled={saving || !editForm.amount || parseFloat(editForm.amount) <= 0}>
+                                {saving ? '...' : 'Save Changes'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Transaction Modal */}
+            {addingDate !== null && (
+                <div className={styles.modalOverlay} onMouseDown={() => { setAddingDate(null); setCatDropOpen(false); }}>
+                    <div className={styles.modal} onMouseDown={e => e.stopPropagation()}>
+                        <h2 className={styles.modalTitle}>Add Transaction</h2>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Amount</label>
+                            <div className={styles.modalAmountWrap}>
+                                <span className={styles.modalCurrency}>$</span>
+                                <input
+                                    className={styles.modalAmountInput}
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={addForm.amount}
+                                    onKeyDown={blockInvalid}
+                                    onChange={e => setAddForm({ ...addForm, amount: e.target.value })}
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Category</label>
+                            <div className={styles.catSelector} data-cat-drop="true">
+                                <button
+                                    className={cx(styles.catSelectorBtn, catDropOpen && styles.catSelectorBtnOpen)}
+                                    onClick={() => setCatDropOpen(o => !o)}
+                                >
+                                    <div className={styles.catSelectorLeft}>
+                                        <div className={styles.catSelectorIcon} style={{ background: `${selectedCatColor}20` }}>
+                                            <SelectedCatIcon style={{ color: selectedCatColor }} width="16" height="16" />
+                                        </div>
+                                        <span className={styles.catSelectorName}>{addForm.category}</span>
+                                    </div>
+                                    <span className={styles.catChevron}>{catDropOpen ? <ChevronUp width="18" height="18" /> : <ChevronDown width="18" height="18" />}</span>
+                                </button>
+                                {catDropOpen && (
+                                    <div className={styles.catList}>
+                                        <div className={styles.catSearchWrap}>
+                                            <input
+                                                className={styles.catSearchInput}
+                                                placeholder="Search categories..."
+                                                value={catSearch}
+                                                onChange={e => setCatSearch(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className={styles.catListItems}>
+                                            {DAILY_CATEGORIES
+                                                .filter(c => c.toLowerCase().includes(catSearch.toLowerCase()))
+                                                .map(c => {
+                                                    const CatIcon = CATEGORY_ICONS[c] ?? OthersGrid;
+                                                    const catColor = CATEGORY_COLORS[c] ?? '#6B7280';
+                                                    return (
+                                                        <button
+                                                            key={c}
+                                                            className={cx(styles.catListItem, addForm.category === c && styles.catListItemActive)}
+                                                            onClick={() => { setAddForm({ ...addForm, category: c }); setCatDropOpen(false); setCatSearch(''); }}
+                                                        >
+                                                            <div className={styles.catListIcon} style={{ background: `${catColor}20` }}>
+                                                                <CatIcon style={{ color: catColor }} width="14" height="14" />
+                                                            </div>
+                                                            <span className={styles.catListName}>{c}</span>
+                                                            {addForm.category === c && <span className={styles.catCheck}>✓</span>}
+                                                        </button>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                            <label className={styles.fieldLabel}>Note</label>
+                            <input
+                                className={styles.modalNoteInput}
+                                type="text"
+                                placeholder="Optional"
+                                value={addForm.note}
+                                onChange={e => setAddForm({ ...addForm, note: e.target.value })}
+                                onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAddingDate(null); setCatDropOpen(false); } }}
+                            />
+                        </div>
+
+                        <div className={styles.modalBtns}>
+                            <button className={styles.modalCancelBtn} onClick={() => { setAddingDate(null); setCatDropOpen(false); }}>Cancel</button>
+                            <button className={styles.modalAddBtn} onClick={handleAdd} disabled={saving || !addForm.amount || parseFloat(addForm.amount) <= 0}>
+                                {saving ? '...' : 'Add Entry'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
