@@ -47,17 +47,24 @@ export async function getDashboardData(
     year: number,
     month: number
 ): Promise<DashboardData> {
-    const [budget, allEntries, recentRaw] = await Promise.all([
-        getBudgetForMonth(userId, year, month),
+    const [rawBudget, allEntries, recentRaw] = await Promise.all([
+        getBudget(userId, year, month),
         getMonthEntries(userId, year, month),
         getRecentTransactions(userId, year, month, 10),
     ]);
 
-    const totalIncome = (budget?.income ?? []).reduce((s: number, r: BudgetRow) => s + r.amount, 0);
+    const income: BudgetRow[] = rawBudget?.income
+        ? rawBudget.income.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+        : [];
+    const fixedExpenses: BudgetRow[] = rawBudget?.fixedExpenses
+        ? rawBudget.fixedExpenses.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+        : [];
+
+    const totalIncome = income.reduce((s: number, r: BudgetRow) => s + r.amount, 0);
 
     const catTotals: Record<string, number> = {};
     let totalFixed = 0;
-    for (const r of budget?.fixedExpenses ?? []) {
+    for (const r of fixedExpenses) {
         catTotals[r.category] = (catTotals[r.category] ?? 0) + r.amount;
         totalFixed += r.amount;
     }
