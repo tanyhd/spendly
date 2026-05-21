@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
-import { decryptAmount } from '@/lib/crypto';
-import { getMonthEntries } from '@/services/mongodb';
+import { getMonthVariableTotals } from '@/services/budget';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;
@@ -17,20 +16,6 @@ export async function GET(
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
     const { year: y, month: m } = await context.params;
-    const year = parseInt(y);
-    const month = parseInt(m);
-
-    const entries = await getMonthEntries(auth.userId, year, month);
-
-    const totals: Record<string, number> = {};
-    for (const e of entries) {
-        const cat = e.category as string;
-        totals[cat] = (totals[cat] ?? 0) + decryptAmount(e.amount);
-    }
-
-    const result = Object.entries(totals)
-        .map(([category, total]) => ({ category, total }))
-        .sort((a, b) => b.total - a.total);
-
+    const result = await getMonthVariableTotals(auth.userId, parseInt(y), parseInt(m));
     return NextResponse.json(result);
 }
