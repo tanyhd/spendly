@@ -108,7 +108,7 @@
 /* Main grid */
 .mainGrid {
     display: grid;
-    grid-template-columns: 22rem 1fr;
+    grid-template-columns: 30rem 1fr;
     gap: 1.5rem;
     align-items: start;
 }
@@ -130,7 +130,7 @@
 /* Donut chart */
 .donutWrap {
     position: relative;
-    height: 220px;
+    height: 280px;
 }
 
 .donutCenter {
@@ -140,17 +140,23 @@
     transform: translate(-50%, -50%);
     text-align: center;
     pointer-events: none;
+    width: 8.5rem;
+    height: 8.5rem;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
 }
 
 .donutCenterLabel {
-    display: block;
     color: var(--text-muted);
-    margin-bottom: 0.125rem;
 }
 
 .donutCenterValue {
-    display: block;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--text);
     white-space: nowrap;

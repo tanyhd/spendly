@@ -3,42 +3,14 @@
 import { useState, useEffect } from 'react';
 import cx from 'classnames';
 import Trash from '@/common/icons/Trash';
-import FoodDining from '@/common/icons/FoodDining';
-import TransportCar from '@/common/icons/TransportCar';
-import ShoppingBag from '@/common/icons/ShoppingBag';
-import HealthHeart from '@/common/icons/HealthHeart';
-import EntertainmentIcon from '@/common/icons/EntertainmentIcon';
-import EducationBook from '@/common/icons/EducationBook';
-import UtilitiesBolt from '@/common/icons/UtilitiesBolt';
 import OthersGrid from '@/common/icons/OthersGrid';
 import AnnualOverview from '@/common/icons/AnnualOverview';
 import ChevronDown from '@/common/icons/ChevronDown';
 import ChevronUp from '@/common/icons/ChevronUp';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
 import styles from './DailyLog.module.css';
 
 const DAILY_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Education', 'Utilities', 'Others'] as const;
-
-const CATEGORY_COLORS: Record<string, string> = {
-    Food: '#F59E0B',
-    Transport: '#3B82F6',
-    Shopping: '#EC4899',
-    Health: '#EF4444',
-    Entertainment: '#8B5CF6',
-    Education: '#06B6D4',
-    Utilities: '#F97316',
-    Others: '#6B7280',
-};
-
-const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
-    Food: FoodDining,
-    Transport: TransportCar,
-    Shopping: ShoppingBag,
-    Health: HealthHeart,
-    Entertainment: EntertainmentIcon,
-    Education: EducationBook,
-    Utilities: UtilitiesBolt,
-    Others: OthersGrid,
-};
 
 type Entry = { _id: string; date: number; category: string; amount: number; note: string };
 type EntryForm = { category: string; amount: string; note: string };

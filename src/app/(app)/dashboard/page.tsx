@@ -6,52 +6,13 @@ import cx from 'classnames';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import styles from './Dashboard.module.css';
 import type { DashboardData } from '@/services/budget';
-import FoodDining from '@/common/icons/FoodDining';
-import TransportCar from '@/common/icons/TransportCar';
-import ShoppingBag from '@/common/icons/ShoppingBag';
-import HealthHeart from '@/common/icons/HealthHeart';
-import EntertainmentIcon from '@/common/icons/EntertainmentIcon';
-import EducationBook from '@/common/icons/EducationBook';
-import UtilitiesBolt from '@/common/icons/UtilitiesBolt';
 import OthersGrid from '@/common/icons/OthersGrid';
-import Bank from '@/common/icons/Bank';
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
 ];
-
-const CATEGORY_COLORS: Record<string, string> = {
-    Food: '#F59E0B',
-    Transport: '#3B82F6',
-    Shopping: '#EC4899',
-    Health: '#10B981',
-    Entertainment: '#8B5CF6',
-    Education: '#06B6D4',
-    Utilities: '#F97316',
-    Others: '#6B7280',
-    Housing: '#7B61FF',
-    Tax: '#EF4444',
-    Insurance: '#14B8A6',
-    Family: '#A78BFA',
-    Other: '#9CA3AF',
-};
-
-const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
-    Food: FoodDining,
-    Transport: TransportCar,
-    Shopping: ShoppingBag,
-    Health: HealthHeart,
-    Entertainment: EntertainmentIcon,
-    Education: EducationBook,
-    Utilities: UtilitiesBolt,
-    Others: OthersGrid,
-    Housing: Bank,
-    Tax: OthersGrid,
-    Insurance: OthersGrid,
-    Family: OthersGrid,
-    Other: OthersGrid,
-};
 
 function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -69,13 +30,14 @@ function ChartTooltip({ active, payload }: any) {
     const { name, value } = payload[0];
     return (
         <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
+            background: '#191829',
+            border: '1px solid #2A2840',
             borderRadius: '0.5rem',
-            padding: '0.5rem 0.75rem',
+            padding: '0.5rem 0.875rem',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
         }}>
-            <div style={{ fontWeight: 600, color: 'var(--text)' }}>{name}</div>
-            <div style={{ color: 'var(--text-muted)' }}>${fmt(value)}</div>
+            <div style={{ fontWeight: 600, color: '#FFFFFF', marginBottom: '0.125rem' }}>{name}</div>
+            <div style={{ color: '#8B8FA8' }}>${fmt(value)}</div>
         </div>
     );
 }
@@ -177,14 +139,14 @@ export default function DashboardPage() {
                             ) : (
                                 <>
                                     <div className={styles.donutWrap}>
-                                        <ResponsiveContainer width="100%" height={220}>
+                                        <ResponsiveContainer width="100%" height={280}>
                                             <PieChart>
                                                 <Pie
                                                     data={chartData}
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={62}
-                                                    outerRadius={90}
+                                                    innerRadius={80}
+                                                    outerRadius={118}
                                                     dataKey="value"
                                                     startAngle={90}
                                                     endAngle={-270}
@@ -194,7 +156,7 @@ export default function DashboardPage() {
                                                         <Cell key={entry.name} fill={entry.color} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip content={<ChartTooltip />} />
+                                                <Tooltip content={<ChartTooltip />} wrapperStyle={{ zIndex: 50 }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                         {topCategory && (

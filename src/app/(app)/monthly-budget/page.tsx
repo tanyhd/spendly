@@ -7,36 +7,8 @@ import Payments from '@/common/icons/Payments';
 import Bank from '@/common/icons/Bank';
 import DailyLog from '@/common/icons/DailyLog';
 import Trash from '@/common/icons/Trash';
-import FoodDining from '@/common/icons/FoodDining';
-import TransportCar from '@/common/icons/TransportCar';
-import ShoppingBag from '@/common/icons/ShoppingBag';
-import HealthHeart from '@/common/icons/HealthHeart';
-import EntertainmentIcon from '@/common/icons/EntertainmentIcon';
-import EducationBook from '@/common/icons/EducationBook';
-import UtilitiesBolt from '@/common/icons/UtilitiesBolt';
 import OthersGrid from '@/common/icons/OthersGrid';
-
-const CATEGORY_COLORS: Record<string, string> = {
-    Food: '#F59E0B',
-    Transport: '#3B82F6',
-    Shopping: '#EC4899',
-    Health: '#EF4444',
-    Entertainment: '#8B5CF6',
-    Education: '#06B6D4',
-    Utilities: '#F97316',
-    Others: '#6B7280',
-};
-
-const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
-    Food: FoodDining,
-    Transport: TransportCar,
-    Shopping: ShoppingBag,
-    Health: HealthHeart,
-    Entertainment: EntertainmentIcon,
-    Education: EducationBook,
-    Utilities: UtilitiesBolt,
-    Others: OthersGrid,
-};
+import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
 
 const MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June',
