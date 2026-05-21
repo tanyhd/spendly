@@ -8,6 +8,7 @@ import AnnualOverview from '@/common/icons/AnnualOverview';
 import ChevronDown from '@/common/icons/ChevronDown';
 import ChevronUp from '@/common/icons/ChevronUp';
 import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
+import WeekPicker from '@/common/components/WeekPicker';
 import styles from './DailyLog.module.css';
 
 const DAILY_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Education', 'Utilities', 'Others'] as const;
@@ -90,13 +91,6 @@ export default function DailyLogPage() {
         return () => document.removeEventListener('mousedown', handleClick);
     }, [catDropOpen]);
 
-    function prevWeek() {
-        setWeekStart(w => { const d = new Date(w); d.setDate(d.getDate() - 7); return d; });
-    }
-    function nextWeek() {
-        setWeekStart(w => { const d = new Date(w); d.setDate(d.getDate() + 7); return d; });
-    }
-
     async function handleAdd() {
         if (!addingDate || !addForm.amount || parseFloat(addForm.amount) <= 0) return;
         setSaving(true);
@@ -171,11 +165,7 @@ export default function DailyLogPage() {
                     <h1 className="pageTitle">Daily Expense Log</h1>
                     <p className="pageSubtitle">Track your daily spending week by week.</p>
                 </div>
-                <div className={styles.weekNav}>
-                    <button className={styles.weekNavBtn} onClick={prevWeek}>&#8249;</button>
-                    <span className={styles.weekLabel}>{fmtWeekRange(weekStart)}</span>
-                    <button className={styles.weekNavBtn} onClick={nextWeek}>&#8250;</button>
-                </div>
+                <WeekPicker weekStart={weekStart} onChange={setWeekStart} />
             </div>
 
             <div className={styles.content}>
