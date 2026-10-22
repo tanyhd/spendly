@@ -1,9 +1,10 @@
-import { getMonthVariableTotals, getBudgetForMonth } from '../budget';
-import { getMonthEntries, getBudget } from '../mongodb';
+import { getMonthVariableTotals, getBudgetForMonth, getDashboardData } from '../budget';
+import { getMonthEntries, getBudget, getRecentTransactions } from '../mongodb';
 
 jest.mock('../mongodb', () => ({
     getMonthEntries: jest.fn(),
     getBudget: jest.fn(),
+    getRecentTransactions: jest.fn(),
 }));
 
 // decryptAmount passes numbers through as-is — mock avoids loading the real
@@ -15,6 +16,7 @@ jest.mock('@/lib/crypto', () => ({
 
 const mockGetMonthEntries = getMonthEntries as jest.MockedFunction<typeof getMonthEntries>;
 const mockGetBudget = getBudget as jest.MockedFunction<typeof getBudget>;
+const mockGetRecentTransactions = getRecentTransactions as jest.MockedFunction<typeof getRecentTransactions>;
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -109,5 +111,61 @@ describe('getBudgetForMonth', () => {
             .mockResolvedValueOnce(null)
             .mockResolvedValueOnce({ income: [], fixedExpenses: [] });
         expect(await getBudgetForMonth('u1', 2026, 5)).toBeNull();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// getDashboardData
+// ---------------------------------------------------------------------------
+
+describe('getDashboardData', () => {
+    const entries = [
+        { _id: 'a', date: 20261005, category: 'Food', amount: 10, note: '' },
+        { _id: 'b', date: 20261005, category: 'Transport', amount: 5, note: '' },
+        { _id: 'c', date: 20261012, category: 'Food', amount: 30, note: '' },
+    ];
+
+    it('splits fixed and variable totals by category, largest first', async () => {
+        mockGetBudget.mockResolvedValue({
+            income: [{ label: 'Salary', amount: 5000, category: 'Employment' }],
+            fixedExpenses: [
+                { label: 'Rent', amount: 1500, category: 'Housing' },
+                { label: 'Tax', amount: 300, category: 'Tax' },
+                { label: 'Bills', amount: 200, category: 'Housing' },
+            ],
+        });
+        mockGetMonthEntries.mockResolvedValue(entries);
+        mockGetRecentTransactions.mockResolvedValue([]);
+        const result = await getDashboardData('u1', 2026, 10);
+        expect(result.fixedByCategory).toEqual([
+            { category: 'Housing', total: 1700 },
+            { category: 'Tax', total: 300 },
+        ]);
+        expect(result.variableByCategory).toEqual([
+            { category: 'Food', total: 40 },
+            { category: 'Transport', total: 5 },
+        ]);
+        expect(result.budgetSaved).toBe(true);
+    });
+
+    it('sums daily-log spending per day in date order', async () => {
+        mockGetBudget.mockResolvedValue(null);
+        mockGetMonthEntries.mockResolvedValue([...entries].reverse());
+        mockGetRecentTransactions.mockResolvedValue([]);
+        const result = await getDashboardData('u1', 2026, 10);
+        expect(result.dailyTotals).toEqual([
+            { date: 20261005, total: 15 },
+            { date: 20261012, total: 30 },
+        ]);
+    });
+
+    it('reports budgetSaved false and zero fixed when the month has no saved budget', async () => {
+        mockGetBudget.mockResolvedValue(null);
+        mockGetMonthEntries.mockResolvedValue([]);
+        mockGetRecentTransactions.mockResolvedValue([]);
+        const result = await getDashboardData('u1', 2026, 10);
+        expect(result.budgetSaved).toBe(false);
+        expect(result.totalFixed).toBe(0);
+        expect(result.fixedByCategory).toEqual([]);
     });
 });

@@ -34,13 +34,25 @@ export async function getMonthVariableTotals(
 
 export type Transaction = { _id: string; date: number; category: string; note: string; amount: number };
 
+export type DailyTotal = { date: number; total: number };
+
 export type DashboardData = {
     totalIncome: number;
     totalFixed: number;
     totalVariable: number;
     expensesByCategory: CategoryTotal[];
     recentTransactions: Transaction[];
+    budgetSaved: boolean;
+    fixedByCategory: CategoryTotal[];
+    variableByCategory: CategoryTotal[];
+    dailyTotals: DailyTotal[];
 };
+
+function sortedTotals(totals: Record<string, number>): CategoryTotal[] {
+    return Object.entries(totals)
+        .map(([category, total]) => ({ category, total }))
+        .sort((a, b) => b.total - a.total);
+}
 
 export async function getDashboardData(
     userId: string,
@@ -63,22 +75,29 @@ export async function getDashboardData(
     const totalIncome = income.reduce((s: number, r: BudgetRow) => s + r.amount, 0);
 
     const catTotals: Record<string, number> = {};
+    const fixedTotals: Record<string, number> = {};
     let totalFixed = 0;
     for (const r of fixedExpenses) {
         catTotals[r.category] = (catTotals[r.category] ?? 0) + r.amount;
+        fixedTotals[r.category] = (fixedTotals[r.category] ?? 0) + r.amount;
         totalFixed += r.amount;
     }
 
+    const variableTotals: Record<string, number> = {};
+    const dayTotals: Record<number, number> = {};
     let totalVariable = 0;
     for (const e of allEntries) {
         const amt = decryptAmount(e.amount);
         catTotals[e.category] = (catTotals[e.category] ?? 0) + amt;
+        variableTotals[e.category] = (variableTotals[e.category] ?? 0) + amt;
+        dayTotals[e.date] = (dayTotals[e.date] ?? 0) + amt;
         totalVariable += amt;
     }
 
-    const expensesByCategory = Object.entries(catTotals)
-        .map(([category, total]) => ({ category, total }))
-        .sort((a, b) => b.total - a.total);
+    const expensesByCategory = sortedTotals(catTotals);
+    const dailyTotals = Object.entries(dayTotals)
+        .map(([date, total]) => ({ date: Number(date), total }))
+        .sort((a, b) => a.date - b.date);
 
     const recentTransactions = recentRaw.map((e: any) => ({
         _id: e._id.toString(),
@@ -88,7 +107,13 @@ export async function getDashboardData(
         amount: decryptAmount(e.amount),
     }));
 
-    return { totalIncome, totalFixed, totalVariable, expensesByCategory, recentTransactions };
+    return {
+        totalIncome, totalFixed, totalVariable, expensesByCategory, recentTransactions,
+        budgetSaved: rawBudget != null,
+        fixedByCategory: sortedTotals(fixedTotals),
+        variableByCategory: sortedTotals(variableTotals),
+        dailyTotals,
+    };
 }
 
 export async function getBudgetForMonth(

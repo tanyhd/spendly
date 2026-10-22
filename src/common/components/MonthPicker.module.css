@@ -1,125 +1,130 @@
 .wrap {
     position: relative;
-}
-
-.nav {
     display: flex;
-    align-items: center;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 9999px;
-    padding: 0.25rem;
+    align-items: stretch;
+    min-height: var(--bar-h);
 }
 
 .navBtn {
-    width: 2rem;
-    height: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1.25rem;
-    line-height: 1;
-    transition: background 0.15s, color 0.15s;
-}
-
-.navBtn:hover {
-    background: var(--surface-2);
-    color: var(--text);
+    width: 52px;
+    border: 0;
+    border-right: 1px solid var(--line);
+    background: transparent;
+    font-size: 1rem;
 }
 
 .label {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 20px;
+    border: 0;
+    border-right: 1px solid var(--line);
+    background: transparent;
+    font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--text);
-    min-width: 9.5rem;
-    text-align: center;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem 0;
-    border-radius: 9999px;
-    transition: color 0.15s;
+    letter-spacing: 0.08em;
 }
 
-.label:hover {
-    color: var(--primary);
+.navBtn:hover,
+.label:hover,
+.labelOpen {
+    background: var(--s2);
+}
+
+/* Small ▼ drawn in CSS: Plex Mono has no ▼ glyph and the fallback renders too big */
+.caret {
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--muted);
 }
 
 .picker {
     position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    z-index: 200;
+    top: 100%;
+    left: 52px;
+    width: 320px;
+    z-index: 31;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    min-width: 14rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--line);
+    border-top: 0;
+    animation: sp-up 0.15s ease-out;
 }
 
 .yearRow {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.875rem;
-}
-
-.year {
-    font-weight: 700;
-    color: var(--text);
+    align-items: stretch;
+    height: 44px;
+    border-bottom: 1px solid var(--line);
 }
 
 .yearBtn {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 44px;
+    border: 0;
+    background: transparent;
+}
+
+.yearBtn:first-child {
+    border-right: 1px solid var(--line);
+}
+
+.yearBtn:last-child {
+    border-left: 1px solid var(--line);
+}
+
+.year {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: none;
-    border: none;
-    border-radius: 50%;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1.25rem;
-    line-height: 1;
-    transition: background 0.15s, color 0.15s;
-}
-
-.yearBtn:hover {
-    background: var(--surface-2);
-    color: var(--text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.375rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
 }
 
 .month {
-    padding: 0.5rem 0;
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    text-align: center;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    height: 48px;
+    border: 0;
+    background: var(--surface);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
 }
 
 .month:hover {
-    background: var(--surface-2);
-    color: var(--text);
+    background: var(--line);
 }
 
-.monthActive {
+.monthActive,
+.monthActive:hover {
     background: var(--primary);
-    color: #fff;
-    border-color: var(--primary);
+    color: var(--bg);
+    font-weight: 600;
+}
+
+.monthCurrent {
+    outline: 1px solid var(--muted);
+    outline-offset: -1px;
+}
+
+@media (max-width: 719px) {
+    .label {
+        min-width: 0;
+    }
+
+    .picker {
+        left: 0;
+        width: 100%;
+    }
 }

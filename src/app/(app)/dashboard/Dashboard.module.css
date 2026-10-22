@@ -1,379 +1,464 @@
 .page {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    max-width: 1160px;
-    width: 100%;
-    margin: 0 auto;
-    padding-bottom: 3rem;
 }
 
-.header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-/* Month nav — same pill style as other pages */
-.monthNavWrap {
+/* Toolbar */
+.toolbar {
     position: relative;
-}
-
-.monthNav {
+    z-index: 2;
     display: flex;
-    align-items: center;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 9999px;
-    padding: 0.25rem;
-    flex-shrink: 0;
-}
-
-.monthNavBtn {
-    width: 2rem;
-    height: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 9999px;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1.25rem;
-    line-height: 1;
-    transition: background 0.15s, color 0.15s;
-}
-
-.monthNavBtn:hover {
-    background: var(--surface-2);
-    color: var(--text);
-}
-
-.monthLabel {
-    font-weight: 600;
-    color: var(--text);
-    min-width: 9.5rem;
-    text-align: center;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem 0;
-    border-radius: 9999px;
-    transition: color 0.15s;
-}
-
-.monthLabel:hover {
-    color: var(--primary);
+    align-items: stretch;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
 }
 
 .picker {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    z-index: 200;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    min-width: 14rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    flex: 0 0 auto;
 }
 
-.pickerYearRow {
+.toolbarRight {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.875rem;
+    gap: 16px;
+    padding: 0 20px;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
 }
 
-.pickerYear {
-    font-weight: 700;
-    color: var(--text);
-}
-
-.pickerYearBtn {
-    width: 1.75rem;
-    height: 1.75rem;
+.status {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    border-radius: 50%;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 1.25rem;
-    line-height: 1;
-    transition: background 0.15s, color 0.15s;
+    gap: 8px;
 }
 
-.pickerYearBtn:hover {
-    background: var(--surface-2);
+.dot {
+    width: 6px;
+    height: 6px;
+}
+
+.ghostBtn {
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+.ghostBtn:hover {
     color: var(--text);
+    border-color: var(--muted);
 }
 
-.pickerGrid {
+/* KPI strip */
+.kpis {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.375rem;
+    grid-template-columns: 1.3fr 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
 }
 
-.pickerMonth {
-    padding: 0.5rem 0;
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 0.5rem;
+.kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    background: var(--bg);
+}
+
+.kpiRate {
+    gap: 8px;
+}
+
+.netValue {
+    font-size: 2.5rem;
     font-weight: 500;
-    color: var(--text-muted);
-    cursor: pointer;
-    text-align: center;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    letter-spacing: -0.03em;
 }
 
-.pickerMonth:hover {
-    background: var(--surface-2);
-    color: var(--text);
+.kpiValue {
+    font-size: 1.5rem;
 }
 
-.pickerMonthActive {
-    background: var(--primary);
-    color: #fff;
-    border-color: var(--primary);
+.note {
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    color: var(--dim);
 }
 
-/* Summary cards */
-.summaryCards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-}
-
-.summaryCard {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.25rem 1.5rem;
+/* Get-started strip */
+.guide {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 12px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--line);
+    background: #120F0D;
 }
 
-.summaryCardLabel {
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
-.summaryCardValue {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.1;
-}
-
-.valueIncome   { color: var(--primary); }
-.valueExpense  { color: var(--danger); }
-.valuePositive { color: var(--success); }
-.valueNegative { color: var(--danger); }
-
-.progressBar {
-    height: 4px;
-    background: var(--border);
-    border-radius: 9999px;
-    overflow: hidden;
-    margin-top: 0.25rem;
-}
-
-.progressFill {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 9999px;
-    transition: width 0.4s ease;
-}
-
-/* Main grid */
-.mainGrid {
-    display: grid;
-    grid-template-columns: 30rem 1fr;
-    gap: 1.5rem;
-    align-items: start;
-}
-
-.card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-}
-
-.cardTitle {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 1.25rem;
-}
-
-/* Donut chart */
-.donutWrap {
-    position: relative;
-    height: 280px;
-}
-
-.donutCenter {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-    width: 8.5rem;
-    height: 8.5rem;
-    border-radius: 50%;
-    background: var(--surface);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-}
-
-.donutCenterLabel {
-    color: var(--text-muted);
-}
-
-.donutCenterValue {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text);
-    white-space: nowrap;
-}
-
-/* Chart legend */
-.legend {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-    margin-top: 1.25rem;
-}
-
-.legendItem {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-}
-
-.legendDot {
-    width: 0.625rem;
-    height: 0.625rem;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.legendName {
-    flex: 1;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.legendPct {
-    font-weight: 600;
-    color: var(--text-muted);
-    flex-shrink: 0;
-}
-
-.chartEmpty {
-    height: 220px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-}
-
-/* Recent transactions */
-.recentHeader {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-}
-
-.viewAllLink {
+.guideTitle {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
     color: var(--primary);
-    font-weight: 600;
-    transition: opacity 0.15s;
 }
 
-.viewAllLink:hover {
-    opacity: 0.75;
+.guideSteps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
 }
 
-.txList {
+.guideStep {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 0;
+    background: var(--bg);
+    text-align: left;
+}
+
+.guideStep:hover {
+    background: var(--surface);
+}
+
+.guideMark {
+    font-size: 0.75rem;
+}
+
+.guideBody {
     display: flex;
     flex-direction: column;
+    gap: 4px;
 }
 
-.txRow {
+.guideHead {
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.guideText {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
+.guideCta {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+}
+
+/* Middle: heatmap + categories */
+.mid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.panel {
     display: flex;
-    align-items: center;
-    gap: 0.875rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.txRow:last-child {
-    border-bottom: none;
-}
-
-.txIconWrap {
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.txInfo {
-    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--bg);
     min-width: 0;
 }
 
-.txName {
-    font-weight: 600;
-    color: var(--text);
+.panelHead {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.legend {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.legendCell {
+    width: 9px;
+    height: 9px;
+}
+
+.dow,
+.heat {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.dow {
+    font-size: 0.625rem;
+    color: var(--dim);
+}
+
+.cell {
+    height: 46px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 5px;
+    border: 1px solid transparent;
+    font-size: 0.625rem;
     overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.cellValue {
+    text-align: right;
+}
+
+.cellHot {
+    color: var(--bg);
+}
+
+.cellToday {
+    border-color: var(--text);
+}
+
+.cellUpcoming {
+    border-color: var(--row);
+    color: var(--faint);
+}
+
+.cats {
+    gap: 12px;
+    font-size: 0.75rem;
+}
+
+.catRow {
+    display: grid;
+    grid-template-columns: 96px 1fr 40px 76px;
+    gap: 10px;
+    align-items: center;
+}
+
+.catName {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     white-space: nowrap;
 }
 
-.txMeta {
-    color: var(--text-muted);
-    margin-top: 0.1rem;
+.swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    flex: none;
+}
+
+.track {
+    height: 12px;
+    background: var(--s2);
+}
+
+.track div {
+    height: 12px;
+}
+
+.catPct {
+    text-align: right;
+    color: var(--muted);
+}
+
+.catAmt {
+    text-align: right;
+}
+
+.fixedHead {
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--row);
+}
+
+.stack {
+    display: flex;
+    gap: 2px;
+    height: 12px;
+}
+
+.stackLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    font-size: 0.6875rem;
+    color: var(--muted);
+}
+
+.stackLegend > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.empty {
+    color: var(--dim);
+    padding: 6px 0;
+}
+
+.noExpenses {
+    padding: 8px 0;
+    border-top: 1px solid var(--row);
+    color: var(--muted);
+}
+
+/* Recent */
+.recent {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8125rem;
+}
+
+.recentHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.viewAll {
+    color: var(--primary);
+    padding: 4px 0;
+}
+
+.txRow {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--row);
+}
+
+.txDate {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.txMain {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.txNote {
+    font-family: var(--font-sans);
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .txAmt {
-    font-weight: 700;
-    color: var(--danger);
-    flex-shrink: 0;
+    text-align: right;
 }
 
-.txEmpty {
-    color: var(--text-muted);
-    padding: 2rem 0;
-    text-align: center;
+.recentEmpty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 28px 20px;
+    color: var(--muted);
 }
 
-.loading {
-    color: var(--text-muted);
-    padding: 2rem 0;
+.outlineBtn {
+    padding: 10px 14px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
 }
 
-@media (max-width: 960px) {
-    .summaryCards { grid-template-columns: repeat(2, 1fr); }
-    .mainGrid { grid-template-columns: 1fr; }
+/* Loading */
+.skel,
+.skelBlock {
+    display: block;
+    background: var(--s2);
+    animation: sp-pulse 1.2s infinite;
+}
+
+.skelBlock {
+    height: 220px;
+    background: var(--surface);
+}
+
+.loadingLine {
+    padding: 28px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.cursor {
+    animation: sp-blink 1s steps(1) infinite;
+}
+
+@keyframes sp-pulse {
+    50% { opacity: 0.5; }
+}
+
+/* Phone */
+@media (max-width: 719px) {
+    .picker {
+        flex: 1;
+    }
+
+    .toolbarRight {
+        display: none;
+    }
+
+    .kpis {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .kpiNet,
+    .kpiRate {
+        grid-column: span 2;
+    }
+
+    .netValue {
+        font-size: 2.375rem;
+    }
+
+    .kpiValue {
+        font-size: 1.125rem;
+    }
+
+    .guideSteps,
+    .mid {
+        grid-template-columns: 1fr;
+    }
+
+    .cell {
+        height: 34px;
+    }
+
+    .catRow {
+        grid-template-columns: 96px 1fr 36px 64px;
+        gap: 8px;
+    }
+
+    .txRow {
+        grid-template-columns: 52px minmax(0, 1fr) auto;
+    }
 }

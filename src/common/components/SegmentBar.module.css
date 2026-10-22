@@ -1,0 +1,20 @@
+.bar {
+    display: grid;
+    gap: 2px;
+}
+
+.bar span {
+    height: 10px;
+}
+
+.on {
+    background: var(--pos);
+}
+
+.off {
+    background: var(--line);
+}
+
+.neg {
+    background: #3A1A20;
+}
