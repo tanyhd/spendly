@@ -3,7 +3,7 @@
 //   const db = setupTestDb();          // in a test file: starts before, stops after, wipes between tests
 //   await db.raw().collection('users').findOne(...)   // look at what was actually stored
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { closeDb, connectToDb } from '@/services/mongodb';
+import { closeDb, connectToDb } from '@/services/db';
 import type { Db } from 'mongodb';
 
 export function setupTestDb() {

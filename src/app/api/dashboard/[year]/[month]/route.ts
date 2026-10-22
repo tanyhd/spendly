@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
-import { getDashboardData } from '@/services/budget';
+import { getDashboardData } from '@/services/summaries';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;

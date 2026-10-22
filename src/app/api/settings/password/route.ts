@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import { verifyToken } from '@/lib/jwt';
-import { getUserById, updateUserPassword } from '@/services/mongodb';
+import { getUserById, updateUserPassword } from '@/services/users';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;

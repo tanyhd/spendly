@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
-import { getSettings } from '@/services/mongodb';
+import { getSettings } from '@/services/settings';
 
 export async function GET(req: NextRequest) {
     try {

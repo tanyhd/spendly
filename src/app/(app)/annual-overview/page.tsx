@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import cx from 'classnames';
-import type { MonthData } from '@/services/budget';
+import type { MonthData } from '@/services/summaries';
 import { MONTHS_SHORT, fmt } from '@/lib/format';
 import styles from './AnnualOverview.module.css';
 

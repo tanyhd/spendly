@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { BudgetRow } from '@/services/budget';
+import type { BudgetRow } from '@/services/budgets';
 import cx from 'classnames';
 import {
     INCOME_CATEGORIES, FIXED_CATEGORIES, dailyCategory, incomeCategory, fixedCategory, type Category,

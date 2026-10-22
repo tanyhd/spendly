@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { decryptAmount } from '@/lib/crypto';
-import type { StoredEntry } from '@/services/budget';
-import { clearMonthData, clearWeekData, clearAllUserData, getEntryAmounts, countBudgets } from '@/services/mongodb';
+import type { EntryDoc } from '@/services/db';
+import { clearMonthData, clearWeekData, clearAllUserData } from '@/services/settings';
+import { getEntryAmounts } from '@/services/entries';
+import { countBudgets } from '@/services/budgets';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;
@@ -17,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const p = req.nextUrl.searchParams;
     const type = p.get('type');
-    let entries: Pick<StoredEntry, 'amount'>[];
+    let entries: Pick<EntryDoc, 'amount'>[];
     let budgets: number;
 
     if (type === 'week' && p.get('weekStart') && p.get('weekEnd')) {

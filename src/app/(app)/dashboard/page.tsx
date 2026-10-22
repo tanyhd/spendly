@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import cx from 'classnames';
-import type { DashboardData } from '@/services/budget';
+import type { DashboardData } from '@/services/summaries';
 import { dailyCategory, fixedCategory } from '@/common/constants/categories';
 import { useExpense } from '@/context/ExpenseContext';
 import MonthPicker from '@/common/components/MonthPicker';

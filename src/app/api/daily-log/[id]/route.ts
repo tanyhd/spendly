@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { encryptAmount } from '@/lib/crypto';
-import { updateEntry, deleteEntry } from '@/services/mongodb';
+import { updateEntry, deleteEntry } from '@/services/entries';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;

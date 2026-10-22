@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { encryptAmount } from '@/lib/crypto';
-import { upsertBudget } from '@/services/mongodb';
-import { getBudgetForMonth } from '@/services/budget';
+import { getBudgetForMonth, upsertBudget } from '@/services/budgets';
 
 async function getAuth(request: NextRequest) {
     const token = request.cookies.get('token')?.value;

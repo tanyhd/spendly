@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { findUserByEmail } from '@/services/mongodb';
+import { findUserByEmail } from '@/services/users';
 import { signToken } from '@/lib/jwt';
 import bcrypt from 'bcrypt';
 

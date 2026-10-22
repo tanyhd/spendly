@@ -1,7 +1,8 @@
 // Builds requests for calling API route handlers directly in tests, signed in as a given user.
 import { NextRequest } from 'next/server';
 import { signToken } from '@/lib/jwt';
-import { createUser, createObjectId } from '@/services/mongodb';
+import { createUser } from '@/services/users';
+import { createObjectId } from '@/services/db';
 
 export type TestUser = { userId: string; email: string; name: string; token: string };
 

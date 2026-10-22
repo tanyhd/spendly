@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
-import { getSettings, getUserById } from '@/services/mongodb';
+import { getSettings } from '@/services/settings';
+import { getUserById } from '@/services/users';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;
