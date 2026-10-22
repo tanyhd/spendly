@@ -1,3 +1,4 @@
+import os from 'os';
 import { MongoClient, ObjectId } from 'mongodb';
 
 export function createObjectId() {
@@ -6,7 +7,7 @@ export function createObjectId() {
 
 // One shared connection per server instance. The promise (not the client) is cached so
 // concurrent first requests share it, and it lives on globalThis so dev hot reloads reuse it.
-const cache = globalThis.__spendlyMongo ?? (globalThis.__spendlyMongo = { promise: null });
+const cache = globalThis.__spendlyMongo ?? (globalThis.__spendlyMongo = { promise: null, client: null });
 
 /** "mongodb+srv://user:secret@host/" → "mongodb+srv://host/" (never log credentials) */
 function redact(uri) {
@@ -15,7 +16,10 @@ function redact(uri) {
 
 export async function connectToDb() {
     if (!cache.promise) {
-        const client = new MongoClient(process.env.MONGODB_URI);
+        // Hand the driver Node's os module: by default it loads it with a dynamic import(),
+        // which Jest can't run, and the connection handshake then goes out empty
+        const client = new MongoClient(process.env.MONGODB_URI, { runtimeAdapters: { os } });
+        cache.client = client;
         cache.promise = client.connect()
             .then(() => {
                 console.log(`Connected to MongoDB at ${redact(process.env.MONGODB_URI)}, db: ${process.env.MONGODB_DBNAME}`);
@@ -27,6 +31,14 @@ export async function connectToDb() {
             });
     }
     return cache.promise;
+}
+
+/** Closes the shared connection (used by tests so the process can exit) */
+export async function closeDb() {
+    const client = cache.client;
+    cache.promise = null;
+    cache.client = null;
+    if (client) await client.close();
 }
 
 export async function findUserByEmail(email) {

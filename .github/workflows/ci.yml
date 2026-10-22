@@ -1,0 +1,58 @@
+# Runs on every push and pull request: lint, type-check, unit/API tests, build, end-to-end tests.
+# Uses in-memory MongoDB and test-only secrets; no access to Atlas or any real data.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache MongoDB binary (mongodb-memory-server)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit -p .
+
+      - name: Unit and API tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          JWT_SECRET: ci-only-jwt-secret
+          ENCRYPTION_KEY: '00000000000000000000000000000000000000000000000000000000000000c1'
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Keep the e2e report when something fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e-report
+            test-results
+          retention-days: 7
