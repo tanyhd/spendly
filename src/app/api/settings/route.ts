@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
-import { getSettings } from '@/services/mongodb';
+import { getSettings, getUserById } from '@/services/mongodb';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;
@@ -12,9 +12,10 @@ export async function GET(req: NextRequest) {
     const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const s = await getSettings(auth.userId);
+    const [s, user] = await Promise.all([getSettings(auth.userId), getUserById(auth.userId)]);
     return NextResponse.json({
         displayName: s.displayName ?? '',
         defaultPage: s.defaultPage ?? 'dashboard',
+        name: user?.name ?? '',
     });
 }

@@ -72,6 +72,11 @@ export function fmtMonth(year: number, month: number): string {
     return `${MONTHS_SHORT[month - 1].toUpperCase()} ${year}`;
 }
 
+/** "1 entry" / "3 entries" */
+export function plural(n: number, one: string, many: string): string {
+    return `${n} ${n === 1 ? one : many}`;
+}
+
 export function initials(name?: string): string {
     if (!name) return '?';
     return name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);

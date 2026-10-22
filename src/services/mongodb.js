@@ -160,21 +160,40 @@ export async function clearMonthData(userId, year, month) {
     const db = await connectToDb();
     const start = year * 10000 + month * 100 + 1;
     const end = year * 10000 + month * 100 + 31;
-    await Promise.all([
+    const [entries, plans] = await Promise.all([
         db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId), date: { $gte: start, $lte: end } }),
         db.collection('monthly_plans').deleteOne({ userId: new ObjectId(userId), year, month }),
     ]);
+    return { deletedEntries: entries.deletedCount, deletedBudgets: plans.deletedCount };
 }
 
 export async function clearWeekData(userId, weekStart, weekEnd) {
     const db = await connectToDb();
-    await db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId), date: { $gte: weekStart, $lte: weekEnd } });
+    const entries = await db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId), date: { $gte: weekStart, $lte: weekEnd } });
+    return { deletedEntries: entries.deletedCount, deletedBudgets: 0 };
 }
 
 export async function clearAllUserData(userId) {
     const db = await connectToDb();
-    await Promise.all([
+    const [entries, plans] = await Promise.all([
         db.collection('daily_entries').deleteMany({ userId: new ObjectId(userId) }),
         db.collection('monthly_plans').deleteMany({ userId: new ObjectId(userId) }),
     ]);
+    return { deletedEntries: entries.deletedCount, deletedBudgets: plans.deletedCount };
+}
+
+/** Encrypted amounts of the entries a clear would delete (all entries when no range) */
+export async function getEntryAmounts(userId, start, end) {
+    const db = await connectToDb();
+    const query = { userId: new ObjectId(userId) };
+    if (start && end) query.date = { $gte: start, $lte: end };
+    return await db.collection('daily_entries').find(query, { projection: { amount: 1 } }).toArray();
+}
+
+/** Saved monthly plans: one month when year/month are given, otherwise all */
+export async function countBudgets(userId, year, month) {
+    const db = await connectToDb();
+    const query = { userId: new ObjectId(userId) };
+    if (year && month) Object.assign(query, { year, month });
+    return await db.collection('monthly_plans').countDocuments(query);
 }
