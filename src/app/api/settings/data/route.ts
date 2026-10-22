@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { decryptAmount } from '@/lib/crypto';
+import type { StoredEntry } from '@/services/budget';
 import { clearMonthData, clearWeekData, clearAllUserData, getEntryAmounts, countBudgets } from '@/services/mongodb';
 
 async function getAuth(req: NextRequest) {
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     const p = req.nextUrl.searchParams;
     const type = p.get('type');
-    let entries: any[];
+    let entries: Pick<StoredEntry, 'amount'>[];
     let budgets: number;
 
     if (type === 'week' && p.get('weekStart') && p.get('weekEnd')) {
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
     }
 
-    const total = entries.reduce((s: number, e: any) => s + decryptAmount(e.amount), 0);
+    const total = entries.reduce((s, e) => s + decryptAmount(e.amount), 0);
     return NextResponse.json({ entries: entries.length, total, budgets });
 }
 

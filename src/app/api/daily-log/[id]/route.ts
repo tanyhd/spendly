@@ -19,7 +19,7 @@ export async function PUT(
     const { id } = await context.params;
     const { category, amount, note } = await req.json();
 
-    const patch: Record<string, any> = {};
+    const patch: Record<string, string> = {};
     if (category !== undefined) patch.category = category;
     if (amount !== undefined) patch.amount = encryptAmount(parseFloat(amount) || 0);
     if (note !== undefined) patch.note = note;

@@ -20,7 +20,6 @@ export default function MonthPicker({ year, month, onChange, className }: Props)
 
     useEffect(() => {
         if (!pickerOpen) return;
-        setPickerYear(year);
         function handleClick(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) {
                 setPickerOpen(false);
@@ -35,7 +34,7 @@ export default function MonthPicker({ year, month, onChange, className }: Props)
             document.removeEventListener('mousedown', handleClick);
             document.removeEventListener('keydown', handleKey);
         };
-    }, [pickerOpen, year]);
+    }, [pickerOpen]);
 
     function prevMonth() {
         if (month === 1) onChange(year - 1, 12);
@@ -50,7 +49,7 @@ export default function MonthPicker({ year, month, onChange, className }: Props)
     return (
         <div className={cx(styles.wrap, className)} ref={ref}>
             <button className={styles.navBtn} onClick={prevMonth} aria-label="Previous month">‹</button>
-            <button className={cx(styles.label, pickerOpen && styles.labelOpen)} onClick={() => setPickerOpen(o => !o)}>
+            <button className={cx(styles.label, pickerOpen && styles.labelOpen)} onClick={() => { setPickerYear(year); setPickerOpen(o => !o); }}>
                 {fmtMonth(year, month)} <span className={styles.caret} aria-hidden="true" />
             </button>
             <button className={styles.navBtn} onClick={nextMonth} aria-label="Next month">›</button>

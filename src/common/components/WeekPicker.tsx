@@ -31,8 +31,6 @@ export default function WeekPicker({ weekStart, onChange, showToday = false, cla
 
     useEffect(() => {
         if (!open) return;
-        setCalYear(weekStart.getFullYear());
-        setCalMonth(weekStart.getMonth());
         function handleClick(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
         }
@@ -45,7 +43,7 @@ export default function WeekPicker({ weekStart, onChange, showToday = false, cla
             document.removeEventListener('mousedown', handleClick);
             document.removeEventListener('keydown', handleKey);
         };
-    }, [open, weekStart]);
+    }, [open]);
 
     function prevCal() {
         if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
@@ -72,7 +70,7 @@ export default function WeekPicker({ weekStart, onChange, showToday = false, cla
     return (
         <div className={cx(styles.wrap, className)} ref={ref}>
             <button className={styles.navBtn} onClick={() => shiftWeek(-1)} aria-label="Previous week">‹</button>
-            <button className={cx(styles.label, open && styles.labelOpen)} onClick={() => setOpen(o => !o)}>
+            <button className={cx(styles.label, open && styles.labelOpen)} onClick={() => { setCalYear(weekStart.getFullYear()); setCalMonth(weekStart.getMonth()); setOpen(o => !o); }}>
                 {fmtWeekRange(weekStart)} <span className={styles.caret} aria-hidden="true" />
             </button>
             <button className={styles.navBtn} onClick={() => shiftWeek(1)} aria-label="Next week">›</button>

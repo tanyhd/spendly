@@ -37,10 +37,10 @@ export async function PUT(
     const encrypted = {
         ...body,
         ...(Array.isArray(body.income) && {
-            income: body.income.map((item: any) => ({ ...item, amount: encryptAmount(parseFloat(item.amount) || 0) })),
+            income: body.income.map((item: { amount?: unknown }) => ({ ...item, amount: encryptAmount(parseFloat(String(item.amount)) || 0) })),
         }),
         ...(Array.isArray(body.fixedExpenses) && {
-            fixedExpenses: body.fixedExpenses.map((item: any) => ({ ...item, amount: encryptAmount(parseFloat(item.amount) || 0) })),
+            fixedExpenses: body.fixedExpenses.map((item: { amount?: unknown }) => ({ ...item, amount: encryptAmount(parseFloat(String(item.amount)) || 0) })),
         }),
     };
 

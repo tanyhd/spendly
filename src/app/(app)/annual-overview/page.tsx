@@ -94,23 +94,28 @@ export default function AnnualOverviewPage() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const [year, setYear] = useState(currentYear);
-    const [months, setMonths] = useState<MonthData[] | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<{ year: number; months: MonthData[] | null } | null>(null);
     const [hover, setHover] = useState<number | null>(null);
     const [closed, setClosed] = useState<Record<string, boolean>>({});
     const [view, setView] = useState<'list' | 'table'>('list');
-    const [openMonth, setOpenMonth] = useState<number | null>(null);
+    const [openMonth, setOpenMonth] = useState<number | null>(now.getMonth());
 
     useEffect(() => {
-        setLoading(true);
-        setMonths(null);
-        setHover(null);
-        setOpenMonth(year === currentYear ? new Date().getMonth() : null);
+        let cancelled = false;
         fetch(`/api/annual-overview/${year}`)
             .then(r => r.ok ? r.json() : null)
-            .then(d => setMonths(d?.months ?? null))
-            .finally(() => setLoading(false));
-    }, [year, currentYear]);
+            .then(d => { if (!cancelled) setData({ year, months: d?.months ?? null }); });
+        return () => { cancelled = true; };
+    }, [year]);
+
+    const loading = data?.year !== year;
+    const months = loading ? null : data.months;
+
+    function changeYear(y: number) {
+        setYear(y);
+        setHover(null);
+        setOpenMonth(y === currentYear ? new Date().getMonth() : null);
+    }
 
     const computed = useMemo(() => {
         if (!months) return null;
@@ -208,9 +213,9 @@ export default function AnnualOverviewPage() {
 
     const toolbar = (
         <div className={styles.toolbar}>
-            <button className={styles.navBtn} onClick={() => setYear(y => y - 1)} aria-label="Previous year">‹</button>
+            <button className={styles.navBtn} onClick={() => changeYear(year - 1)} aria-label="Previous year">‹</button>
             <span className={styles.yearLabel}>{year}</span>
-            <button className={styles.navBtn} onClick={() => setYear(y => y + 1)} aria-label="Next year">›</button>
+            <button className={styles.navBtn} onClick={() => changeYear(year + 1)} aria-label="Next year">›</button>
             {hasData && computed && (
                 <span className={styles.coverage}>
                     {computed.active.filter(Boolean).length} OF 12 MONTHS WITH DATA

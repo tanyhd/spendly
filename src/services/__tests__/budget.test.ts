@@ -10,7 +10,7 @@ jest.mock('../mongodb', () => ({
 // decryptAmount passes numbers through as-is — mock avoids loading the real
 // module which requires ENCRYPTION_KEY in the environment.
 jest.mock('@/lib/crypto', () => ({
-    decryptAmount: (v: any) => (typeof v === 'number' ? v : parseFloat(v) || 0),
+    decryptAmount: (v: unknown) => (typeof v === 'number' ? v : parseFloat(String(v)) || 0),
     encryptAmount: (v: number) => String(v),
 }));
 

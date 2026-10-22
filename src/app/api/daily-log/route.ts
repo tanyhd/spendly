@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { encryptAmount, decryptAmount } from '@/lib/crypto';
 import { getWeekEntries, createEntry } from '@/services/mongodb';
+import type { StoredEntry } from '@/services/budget';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     const entries = await getWeekEntries(auth.userId, weekStartInt, weekEndInt);
     return NextResponse.json(
-        entries.map((e: any) => ({
+        entries.map((e: StoredEntry) => ({
             _id: e._id.toString(),
             date: e.date,
             category: e.category,

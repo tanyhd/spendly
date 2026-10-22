@@ -2,6 +2,10 @@ import { getMonthEntries, getBudget, getRecentTransactions } from './mongodb';
 import { decryptAmount } from '@/lib/crypto';
 
 export type CategoryTotal = { category: string; total: number };
+
+/** Shapes as stored in MongoDB (amounts are encrypted strings, or plain numbers in old data) */
+export type StoredRow = { label: string; amount: string | number; category: string; recurring?: boolean };
+export type StoredEntry = { _id: { toString(): string }; date: number; category: string; amount: string | number; note?: string };
 export type BudgetRow = { label: string; amount: number; category: string; recurring?: boolean };
 export type BudgetData = {
     income: BudgetRow[];
@@ -72,10 +76,10 @@ export async function getDashboardData(
     ]);
 
     const income: BudgetRow[] = rawBudget?.income
-        ? rawBudget.income.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+        ? rawBudget.income.map((r: StoredRow) => ({ ...r, amount: decryptAmount(r.amount) }))
         : [];
     const fixedExpenses: BudgetRow[] = rawBudget?.fixedExpenses
-        ? rawBudget.fixedExpenses.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+        ? rawBudget.fixedExpenses.map((r: StoredRow) => ({ ...r, amount: decryptAmount(r.amount) }))
         : [];
 
     const totalIncome = income.reduce((s: number, r: BudgetRow) => s + r.amount, 0);
@@ -105,7 +109,7 @@ export async function getDashboardData(
         .map(([date, total]) => ({ date: Number(date), total }))
         .sort((a, b) => a.date - b.date);
 
-    const recentTransactions = recentRaw.map((e: any) => ({
+    const recentTransactions = recentRaw.map((e: StoredEntry) => ({
         _id: e._id.toString(),
         date: e.date,
         category: e.category,
@@ -132,10 +136,10 @@ export async function getBudgetForMonth(
     if (budget) {
         return {
             income: Array.isArray(budget.income)
-                ? budget.income.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+                ? budget.income.map((r: StoredRow) => ({ ...r, amount: decryptAmount(r.amount) }))
                 : [],
             fixedExpenses: Array.isArray(budget.fixedExpenses)
-                ? budget.fixedExpenses.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+                ? budget.fixedExpenses.map((r: StoredRow) => ({ ...r, amount: decryptAmount(r.amount) }))
                 : [],
             source: 'saved',
         };
@@ -148,11 +152,11 @@ export async function getBudgetForMonth(
     if (!prev) return null;
 
     const income: BudgetRow[] = Array.isArray(prev.income)
-        ? prev.income.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+        ? prev.income.map((r: StoredRow) => ({ ...r, amount: decryptAmount(r.amount) }))
         : [];
 
     const fixedExpenses: BudgetRow[] = Array.isArray(prev.fixedExpenses)
-        ? prev.fixedExpenses.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
+        ? prev.fixedExpenses.map((r: StoredRow) => ({ ...r, amount: decryptAmount(r.amount) }))
         : [];
 
     if (income.length === 0 && fixedExpenses.length === 0) return null;
@@ -169,11 +173,11 @@ export async function getAnnualData(userId: string, year: number): Promise<Annua
             ]);
 
             const income: MonthIncomeRow[] = budget?.income
-                ? budget.income.map((r: any) => ({ label: r.label, amount: decryptAmount(r.amount) }))
+                ? budget.income.map((r: StoredRow) => ({ label: r.label, amount: decryptAmount(r.amount) }))
                 : [];
 
             const fixedExpenses: MonthFixedRow[] = budget?.fixedExpenses
-                ? budget.fixedExpenses.map((r: any) => ({ label: r.label, amount: decryptAmount(r.amount) }))
+                ? budget.fixedExpenses.map((r: StoredRow) => ({ label: r.label, amount: decryptAmount(r.amount) }))
                 : [];
 
             const varTotals: Record<string, number> = {};
