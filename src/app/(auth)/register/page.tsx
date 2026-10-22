@@ -3,10 +3,9 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Mail from '@/common/icons/Mail';
-import Eye from '@/common/icons/Eye';
-import EyeOff from '@/common/icons/EyeOff';
-import styles from './Register.module.css';
+import cx from 'classnames';
+import AuthField from '../AuthField';
+import styles from '../Auth.module.css';
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -14,13 +13,12 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirm, setShowConfirm] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
+        if (loading) return;
         setError('');
 
         if (password !== confirm) {
@@ -39,103 +37,52 @@ export default function RegisterPage() {
             const data = await res.json();
             if (!res.ok) {
                 setError(data.message || 'Registration failed');
+                setLoading(false);
                 return;
             }
 
             router.push('/dashboard');
         } catch {
             setError('Something went wrong. Please try again.');
-        } finally {
             setLoading(false);
         }
     }
 
+    const edit = (set: (v: string) => void) => (v: string) => { set(v); setError(''); };
+
     return (
-        <div className={styles.card}>
-            <div className={styles.logoWrap}>
-                <img src="/logo.png" alt="Spendly" className={styles.logoImg} />
+        <form className={styles.form} onSubmit={handleSubmit}>
+            <div className={styles.heading}>
+                <h2 className={styles.title}>Create account</h2>
+                <p className={styles.subtitle}>Sign up for Spendly.</p>
             </div>
-            <h1 className={styles.title}>Create account</h1>
-            <p className={styles.subtitle}>Sign up for Spendly</p>
 
-            <form onSubmit={handleSubmit} className={styles.form}>
-                <div className={styles.field}>
-                    <label className={styles.label}>Name</label>
-                    <div className={styles.inputWrap}>
-                        <input
-                            className={styles.input}
-                            type="text"
-                            placeholder="Your full name"
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            required
-                        />
-                    </div>
-                </div>
+            <AuthField
+                label="NAME" type="text" value={name} onChange={edit(setName)}
+                placeholder="Your full name" autoComplete="name" invalid={!!error}
+            />
+            <AuthField
+                label="EMAIL" type="email" value={email} onChange={edit(setEmail)}
+                placeholder="you@example.com" autoComplete="email" invalid={!!error}
+            />
+            <AuthField
+                label="PASSWORD" hint="MIN 8 CHARACTERS" type="password" value={password} onChange={edit(setPassword)}
+                placeholder="Create a password" autoComplete="new-password" invalid={!!error} minLength={8}
+            />
+            <AuthField
+                label="CONFIRM PASSWORD" type="password" value={confirm} onChange={edit(setConfirm)}
+                placeholder="Repeat your password" autoComplete="new-password" invalid={!!error}
+            />
 
-                <div className={styles.field}>
-                    <label className={styles.label}>Email</label>
-                    <div className={styles.inputWrap}>
-                        <input
-                            className={styles.input}
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            required
-                        />
-                        <span className={styles.inputIcon}>
-                            <Mail />
-                        </span>
-                    </div>
-                </div>
+            {error && <p className={styles.error} role="alert">✕ {error}</p>}
 
-                <div className={styles.field}>
-                    <label className={styles.label}>Password</label>
-                    <div className={styles.inputWrap}>
-                        <input
-                            className={styles.input}
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Create a password"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            minLength={8}
-                            required
-                        />
-                        <button type="button" className={styles.eyeBtn} onClick={() => setShowPassword(p => !p)}>
-                            {showPassword ? <EyeOff /> : <Eye />}
-                        </button>
-                    </div>
-                </div>
+            <button className={cx(styles.submit, loading && styles.submitBusy)} type="submit" disabled={loading}>
+                {loading ? 'CREATING ACCOUNT…' : 'CREATE ACCOUNT →'}
+            </button>
 
-                <div className={styles.field}>
-                    <label className={styles.label}>Confirm Password</label>
-                    <div className={styles.inputWrap}>
-                        <input
-                            className={styles.input}
-                            type={showConfirm ? 'text' : 'password'}
-                            placeholder="Confirm your password"
-                            value={confirm}
-                            onChange={e => setConfirm(e.target.value)}
-                            required
-                        />
-                        <button type="button" className={styles.eyeBtn} onClick={() => setShowConfirm(p => !p)}>
-                            {showConfirm ? <EyeOff /> : <Eye />}
-                        </button>
-                    </div>
-                </div>
-
-                {error && <p className={styles.error}>{error}</p>}
-
-                <button className={styles.submit} type="submit" disabled={loading}>
-                    {loading ? 'Creating account...' : 'Create account'}
-                </button>
-            </form>
-
-            <p className={styles.footer}>
-                Already have an account?{' '}
-                <Link href="/login" className={styles.link}>Sign in</Link>
+            <p className={styles.switch}>
+                Already have an account? <Link href="/login" className={styles.switchLink}>SIGN IN →</Link>
             </p>
-        </div>
+        </form>
     );
 }

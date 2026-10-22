@@ -3,21 +3,20 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Mail from '@/common/icons/Mail';
-import Eye from '@/common/icons/Eye';
-import EyeOff from '@/common/icons/EyeOff';
-import styles from './Login.module.css';
+import cx from 'classnames';
+import AuthField from '../AuthField';
+import styles from '../Auth.module.css';
 
 export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     async function handleSubmit(e: FormEvent) {
         e.preventDefault();
+        if (loading) return;
         setError('');
         setLoading(true);
 
@@ -31,6 +30,7 @@ export default function LoginPage() {
             const data = await res.json();
             if (!res.ok) {
                 setError(data.message || 'Login failed');
+                setLoading(false);
                 return;
             }
 
@@ -39,65 +39,37 @@ export default function LoginPage() {
             router.push(`/${defaultPage}`);
         } catch {
             setError('Something went wrong. Please try again.');
-        } finally {
             setLoading(false);
         }
     }
 
+    const edit = (set: (v: string) => void) => (v: string) => { set(v); setError(''); };
+
     return (
-        <div className={styles.card}>
-            <div className={styles.logoWrap}>
-                <img src="/logo.png" alt="Spendly" className={styles.logoImg} />
+        <form className={styles.form} onSubmit={handleSubmit}>
+            <div className={styles.heading}>
+                <h2 className={styles.title}>Welcome back</h2>
+                <p className={styles.subtitle}>Sign in to your account.</p>
             </div>
-            <h1 className={styles.title}>Welcome back</h1>
-            <p className={styles.subtitle}>Sign in to your account</p>
 
-            <form onSubmit={handleSubmit} className={styles.form}>
-                <div className={styles.field}>
-                    <label className={styles.label}>Email</label>
-                    <div className={styles.inputWrap}>
-                        <input
-                            className={styles.input}
-                            type="email"
-                            placeholder="you@example.com"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            required
-                        />
-                        <span className={styles.inputIcon}>
-                            <Mail />
-                        </span>
-                    </div>
-                </div>
+            <AuthField
+                label="EMAIL" type="email" value={email} onChange={edit(setEmail)}
+                placeholder="you@example.com" autoComplete="email" invalid={!!error}
+            />
+            <AuthField
+                label="PASSWORD" type="password" value={password} onChange={edit(setPassword)}
+                placeholder="Your password" autoComplete="current-password" invalid={!!error}
+            />
 
-                <div className={styles.field}>
-                    <label className={styles.label}>Password</label>
-                    <div className={styles.inputWrap}>
-                        <input
-                            className={styles.input}
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Your password"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            required
-                        />
-                        <button type="button" className={styles.eyeBtn} onClick={() => setShowPassword(p => !p)}>
-                            {showPassword ? <EyeOff /> : <Eye />}
-                        </button>
-                    </div>
-                </div>
+            {error && <p className={styles.error} role="alert">✕ {error}</p>}
 
-                {error && <p className={styles.error}>{error}</p>}
+            <button className={cx(styles.submit, loading && styles.submitBusy)} type="submit" disabled={loading}>
+                {loading ? 'SIGNING IN…' : 'SIGN IN →'}
+            </button>
 
-                <button className={styles.submit} type="submit" disabled={loading}>
-                    {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-            </form>
-
-            <p className={styles.footer}>
-                Don&apos;t have an account?{' '}
-                <Link href="/register" className={styles.link}>Register</Link>
+            <p className={styles.switch}>
+                No account yet? <Link href="/register" className={styles.switchLink}>CREATE ONE →</Link>
             </p>
-        </div>
+        </form>
     );
 }
