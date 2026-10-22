@@ -2,21 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import cx from 'classnames';
+import { MONTHS, getWeekStart, fmtWeekRange } from '@/lib/format';
 import styles from './WeekPicker.module.css';
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-    d.setHours(0, 0, 0, 0);
-    return d;
-}
 
 function sameDay(a: Date, b: Date): boolean {
     return a.getFullYear() === b.getFullYear()
@@ -24,27 +13,21 @@ function sameDay(a: Date, b: Date): boolean {
         && a.getDate() === b.getDate();
 }
 
-function fmtRange(ws: Date): string {
-    const end = new Date(ws);
-    end.setDate(end.getDate() + 6);
-    const sm = ws.toLocaleDateString('en-US', { month: 'short' });
-    const em = end.toLocaleDateString('en-US', { month: 'short' });
-    const sy = ws.getFullYear();
-    if (sm === em) return `${sm} ${ws.getDate()}–${end.getDate()} ${sy}`;
-    return `${sm} ${ws.getDate()} – ${em} ${end.getDate()} ${sy}`;
-}
-
 type Props = {
     weekStart: Date;
     onChange: (weekStart: Date) => void;
+    /** Adds a TODAY cell that jumps to the current week */
+    showToday?: boolean;
+    className?: string;
 };
 
-export default function WeekPicker({ weekStart, onChange }: Props) {
+export default function WeekPicker({ weekStart, onChange, showToday = false, className }: Props) {
     const [open, setOpen] = useState(false);
     const [calYear, setCalYear] = useState(weekStart.getFullYear());
     const [calMonth, setCalMonth] = useState(weekStart.getMonth());
     const ref = useRef<HTMLDivElement>(null);
     const today = new Date();
+    const thisWeek = getWeekStart(today);
 
     useEffect(() => {
         if (!open) return;
@@ -53,8 +36,15 @@ export default function WeekPicker({ weekStart, onChange }: Props) {
         function handleClick(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
         }
+        function handleKey(e: KeyboardEvent) {
+            if (e.key === 'Escape') setOpen(false);
+        }
         document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
+        document.addEventListener('keydown', handleKey);
+        return () => {
+            document.removeEventListener('mousedown', handleClick);
+            document.removeEventListener('keydown', handleKey);
+        };
     }, [open, weekStart]);
 
     function prevCal() {
@@ -66,32 +56,11 @@ export default function WeekPicker({ weekStart, onChange }: Props) {
         else setCalMonth(m => m + 1);
     }
 
-    // Build grid: previous month overflow + current month + next month overflow
-    const firstOfMonth = new Date(calYear, calMonth, 1);
-    const offset = (firstOfMonth.getDay() + 6) % 7; // 0=Mon … 6=Sun
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    const prevMonthDays = new Date(calYear, calMonth, 0).getDate();
-    const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
-
-    const allDays: Date[] = [
-        ...Array.from({ length: offset }, (_, i) =>
-            new Date(calYear, calMonth - 1, prevMonthDays - offset + i + 1)),
-        ...Array.from({ length: daysInMonth }, (_, i) =>
-            new Date(calYear, calMonth, i + 1)),
-        ...Array.from({ length: totalCells - offset - daysInMonth }, (_, i) =>
-            new Date(calYear, calMonth + 1, i + 1)),
-    ];
-
+    // One row per Monday-start week that touches the shown month
     const rows: Date[][] = [];
-    for (let i = 0; i < allDays.length; i += 7) rows.push(allDays.slice(i, i + 7));
-
-    function selectRow(row: Date[]) {
-        onChange(getWeekStart(row[0]));
-        setOpen(false);
-    }
-
-    function isSelectedRow(row: Date[]): boolean {
-        return sameDay(getWeekStart(row[0]), weekStart);
+    const lastOfMonth = new Date(calYear, calMonth + 1, 0);
+    for (let w = getWeekStart(new Date(calYear, calMonth, 1)); w <= lastOfMonth; w = new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7)) {
+        rows.push(Array.from({ length: 7 }, (_, i) => new Date(w.getFullYear(), w.getMonth(), w.getDate() + i)));
     }
 
     function shiftWeek(delta: number) {
@@ -101,48 +70,44 @@ export default function WeekPicker({ weekStart, onChange }: Props) {
     }
 
     return (
-        <div className={styles.wrap} ref={ref}>
-            <div className={styles.nav}>
-                <button className={styles.navBtn} onClick={() => shiftWeek(-1)}>&#8249;</button>
-                <button className={styles.label} onClick={() => setOpen(o => !o)}>
-                    {fmtRange(weekStart)}
+        <div className={cx(styles.wrap, className)} ref={ref}>
+            <button className={styles.navBtn} onClick={() => shiftWeek(-1)} aria-label="Previous week">‹</button>
+            <button className={cx(styles.label, open && styles.labelOpen)} onClick={() => setOpen(o => !o)}>
+                {fmtWeekRange(weekStart)} <span className={styles.caret} aria-hidden="true" />
+            </button>
+            <button className={styles.navBtn} onClick={() => shiftWeek(1)} aria-label="Next week">›</button>
+            {showToday && (
+                <button
+                    className={cx(styles.today, sameDay(weekStart, thisWeek) && styles.todayCurrent)}
+                    onClick={() => onChange(thisWeek)}
+                >
+                    TODAY
                 </button>
-                <button className={styles.navBtn} onClick={() => shiftWeek(1)}>&#8250;</button>
-            </div>
+            )}
 
             {open && (
                 <div className={styles.picker}>
                     <div className={styles.calHeader}>
-                        <button className={styles.calBtn} onClick={prevCal}>&#8249;</button>
-                        <span className={styles.calMonth}>{MONTHS[calMonth]} {calYear}</span>
-                        <button className={styles.calBtn} onClick={nextCal}>&#8250;</button>
-                        <button
-                            className={styles.todayBtn}
-                            onClick={() => { onChange(getWeekStart(today)); setOpen(false); }}
-                        >
-                            Today
-                        </button>
+                        <button className={styles.calBtn} onClick={prevCal} aria-label="Previous month">‹</button>
+                        <span className={styles.calMonth}>{MONTHS[calMonth].toUpperCase()} {calYear}</span>
+                        <button className={styles.calBtn} onClick={nextCal} aria-label="Next month">›</button>
                     </div>
-
                     <div className={styles.dayHeaders}>
-                        {DAY_HEADERS.map((d, i) => (
-                            <span key={i} className={styles.dayHeader}>{d}</span>
-                        ))}
+                        {DAY_HEADERS.map((d, i) => <span key={i}>{d}</span>)}
                     </div>
-
-                    <div className={styles.grid}>
-                        {rows.map((row, ri) => (
+                    <div className={styles.weeks}>
+                        {rows.map(row => (
                             <button
-                                key={ri}
-                                className={cx(styles.week, isSelectedRow(row) && styles.weekSelected)}
-                                onClick={() => selectRow(row)}
+                                key={row[0].toISOString()}
+                                className={cx(styles.week, sameDay(row[0], weekStart) && styles.weekSelected)}
+                                onClick={() => { onChange(row[0]); setOpen(false); }}
                             >
-                                {row.map((d, di) => (
+                                {row.map(d => (
                                     <span
-                                        key={di}
+                                        key={d.getDate()}
                                         className={cx(
                                             styles.day,
-                                            d.getMonth() !== calMonth && styles.dayAdjacentMonth,
+                                            d.getMonth() !== calMonth && styles.dayOther,
                                             sameDay(d, today) && styles.dayToday,
                                         )}
                                     >
@@ -152,6 +117,7 @@ export default function WeekPicker({ weekStart, onChange }: Props) {
                             </button>
                         ))}
                     </div>
+                    <div className={styles.hint}>PICK A ROW TO JUMP TO THAT WEEK</div>
                 </div>
             )}
         </div>
