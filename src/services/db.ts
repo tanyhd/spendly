@@ -26,7 +26,16 @@ export type EntryDoc = {
 };
 
 /** `id` is stable across saves and copy-forward (older rows saved before ids existed have none) */
-export type PlanRowDoc = { id?: string; label: string; category: string; amount: StoredAmount };
+export type PlanRowDoc = {
+    id?: string;
+    label: string;
+    category: string;
+    amount: StoredAmount;
+    /** Fixed expenses only: day of month the bill is due (1–31, clamped to the month's length) */
+    dueDay?: number | null;
+    /** Fixed expenses only: ticked as paid this month */
+    paid?: boolean;
+};
 
 export type PlanDoc = {
     _id: ObjectId;

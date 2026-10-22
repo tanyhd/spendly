@@ -2,7 +2,8 @@
 import { decryptAmount } from '@/lib/crypto';
 import { todayInt } from '@/lib/format';
 import { budgetProgress, suggestLimits, type BudgetProgress, type CategoryLimit } from '@/lib/budgetProgress';
-import { getBudget, decryptRows, decryptLimits } from './budgets';
+import { billTotals, upcomingBills, type BillTotals } from '@/lib/bills';
+import { getBudget, getBudgetForMonth, decryptRows, decryptFixed, decryptLimits } from './budgets';
 import { getMonthEntries, getRecentTransactions, toEntry, type Entry } from './entries';
 
 export type CategoryTotal = { category: string; total: number };
@@ -21,6 +22,8 @@ export type DashboardData = {
     dailyTotals: DailyTotal[];
     /** Category limits vs this month's daily spending; null when the saved plan has no limits */
     budgets: BudgetProgress | null;
+    /** The saved plan's fixed expenses as bills: paid vs left to pay */
+    bills: BillTotals;
 };
 
 export type MonthIncomeRow = { label: string; amount: number };
@@ -55,7 +58,7 @@ export async function getDashboardData(userId: string, year: number, month: numb
     ]);
 
     const income = decryptRows(plan?.income);
-    const fixedExpenses = decryptRows(plan?.fixedExpenses);
+    const fixedExpenses = decryptFixed(plan?.fixedExpenses);
     const limits = decryptLimits(plan?.categoryBudgets).map(l => ({ category: l.category, amount: l.amount }));
     const totalIncome = income.reduce((s, r) => s + r.amount, 0);
 
@@ -92,7 +95,19 @@ export async function getDashboardData(userId: string, year: number, month: numb
         variableByCategory: sortedTotals(variableTotals),
         dailyTotals,
         budgets: limits.length > 0 ? budgetProgress(limits, variableTotals, year, month, today) : null,
+        bills: billTotals(fixedExpenses, year, month, today),
     };
+}
+
+/** Bills coming up from today, across this month and next (a month without a saved plan uses its copy) */
+export async function getUpcomingBills(userId: string, days: number, today = todayInt()) {
+    const y = Math.floor(today / 10000), m = Math.floor(today / 100) % 100;
+    const next = m === 12 ? { year: y + 1, month: 1 } : { year: y, month: m + 1 };
+    const months = await Promise.all([{ year: y, month: m }, next].map(async ({ year, month }) => {
+        const plan = await getBudgetForMonth(userId, year, month);
+        return { year, month, bills: plan?.fixedExpenses ?? [], planSaved: plan?.source === 'saved' };
+    }));
+    return upcomingBills(months, today, days);
 }
 
 /** Suggested limits for a month: average daily-category spending over the 3 months before it */

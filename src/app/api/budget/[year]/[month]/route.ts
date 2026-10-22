@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { parseYearMonth } from '@/lib/period';
-import { getBudgetForMonth, upsertBudget, parsePlanInput } from '@/services/budgets';
+import { getBudgetForMonth, savePlan, parsePlanInput } from '@/services/budgets';
 
 async function getAuth(request: NextRequest) {
     const token = request.cookies.get('token')?.value;
@@ -37,6 +37,6 @@ export async function PUT(
     const parsed = parsePlanInput(body);
     if (!parsed.ok) return NextResponse.json({ message: parsed.error }, { status: 400 });
 
-    await upsertBudget(auth.userId, ym.year, ym.month, parsed.data);
+    await savePlan(auth.userId, ym.year, ym.month, parsed.data);
     return NextResponse.json({ success: true });
 }
