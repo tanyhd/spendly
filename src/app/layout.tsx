@@ -1,10 +1,18 @@
 import type { Metadata } from 'next';
-import { Hanken_Grotesk } from 'next/font/google';
+import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 
-const hanken = Hanken_Grotesk({
+const plexMono = IBM_Plex_Mono({
     subsets: ['latin'],
-    variable: '--font-hanken',
+    weight: ['400', '500', '600'],
+    variable: '--font-plex-mono',
+    display: 'swap',
+});
+
+const plexSans = IBM_Plex_Sans({
+    subsets: ['latin'],
+    weight: ['400', '600', '700'],
+    variable: '--font-plex-sans',
     display: 'swap',
 });
 
@@ -15,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en" className={hanken.variable}>
+        <html lang="en" className={`${plexMono.variable} ${plexSans.variable}`}>
             <body>{children}</body>
         </html>
     );

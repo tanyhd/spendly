@@ -1,18 +1,52 @@
 ﻿@import "tailwindcss";
 
 :root {
-  --bg: #0D0C14;
-  --surface: #191829;
-  --surface-2: #111019;
-  --border: #2A2840;
-  --primary: #7B61FF;
-  --primary-dark: #6449E8;
-  --primary-light: rgba(123, 97, 255, 0.15);
-  --primary-gradient: linear-gradient(135deg, #7B61FF 0%, #9333EA 100%);
-  --text: #FFFFFF;
-  --text-muted: #8B8FA8;
-  --danger: #EF4444;
-  --success: #10B981;
+  /* Surfaces */
+  --bg: #0E0E0E;
+  --surface: #161616;
+  --s2: #1C1C1C;
+  --line: #2A2A2A;
+  --row: #1E1E1E;
+
+  /* Text */
+  --text: #EDEDED;
+  --muted: #8C8C8C;
+  --dim: #5F5F5F;
+  --faint: #444444;
+
+  /* Brand + semantic */
+  --primary: #FF5B1F;
+  --primary-hover: #FF7340;
+  --primary-tint: #241510;
+  --income: #9DB8FF;
+  --expense: #FF5B1F;
+  --pos: #3CE08B;
+  --neg: #FF4D6A;
+  --danger: #FF4D6A;
+  --danger-tint: #1F0D10;
+
+  /* Heatmap steps (less → more) */
+  --heat-0: #1C1C1C;
+  --heat-1: #3A1F14;
+  --heat-2: #6B2E15;
+  --heat-3: #B2431A;
+  --heat-4: #FF5B1F;
+
+  /* Layout */
+  --bar-h: 52px;
+  --tabbar-h: 72px;
+
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-plex-sans), Arial, sans-serif;
+
+  /* Legacy names still used by pages not yet migrated */
+  --surface-2: var(--bg);
+  --border: var(--line);
+  --text-muted: var(--muted);
+  --primary-dark: var(--primary);
+  --primary-light: var(--primary-tint);
+  --primary-gradient: var(--primary);
+  --success: var(--pos);
 }
 
 *, *::before, *::after {
@@ -28,8 +62,8 @@ html, body {
 body {
   background: var(--bg);
   color: var(--text);
-  font-size: 1rem;
-  font-family: var(--font-hanken), Arial, sans-serif;
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -40,19 +74,46 @@ a {
 
 input, button, textarea, select {
   font: inherit;
+  color: inherit;
 }
 
 button {
   cursor: pointer;
 }
 
+input::placeholder {
+  color: var(--dim);
+}
+
+/* Shared one-liners */
+.label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes sp-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes sp-blink {
+  50% { opacity: 0; }
+}
+
+/* Legacy page headings (removed once every page is migrated) */
 .pageTitle {
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
   color: var(--text);
   margin-bottom: 0.25rem;
 }
 
 .pageSubtitle {
-  color: var(--text-muted);
+  color: var(--muted);
 }

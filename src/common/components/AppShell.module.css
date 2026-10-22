@@ -1,0 +1,304 @@
+.shell {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: var(--bar-h);
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+}
+
+.brand,
+.phoneTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.brand {
+    padding: 0 20px;
+    border-right: 1px solid var(--line);
+}
+
+.phoneTitle {
+    flex: 1;
+    padding: 0 16px;
+    font-size: 0.8125rem;
+    letter-spacing: 0.08em;
+}
+
+.mark {
+    width: 10px;
+    height: 10px;
+    background: var(--primary);
+}
+
+.nav {
+    display: flex;
+    align-items: stretch;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 18px;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+}
+
+.navItem:hover {
+    color: var(--text);
+}
+
+.navActive {
+    color: var(--text);
+    border-bottom-color: var(--primary);
+}
+
+.navNum {
+    color: var(--dim);
+}
+
+.addBtn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+    border: 0;
+    background: var(--primary);
+    color: var(--bg);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+}
+
+.addBtn:hover {
+    background: var(--primary-hover);
+}
+
+.key {
+    border: 1px solid var(--bg);
+    padding: 0 5px;
+}
+
+.avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: transparent;
+    letter-spacing: 0.06em;
+}
+
+.avatar:hover,
+.avatarOpen {
+    background: var(--s2);
+}
+
+.avatarPhone {
+    width: 52px;
+    padding: 0;
+}
+
+.main {
+    min-height: calc(100vh - var(--bar-h));
+    /* Own stacking context, so page content never covers the bars */
+    isolation: isolate;
+    /* A too-wide page must not widen the phone viewport (which pushes the tab bar off-screen) */
+    overflow-x: clip;
+}
+
+/* Account menu: dropdown on desktop */
+.menuOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+}
+
+.menu {
+    position: fixed;
+    top: var(--bar-h);
+    right: 0;
+    width: 300px;
+    z-index: 41;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-top: 0;
+    font-size: 0.75rem;
+    animation: sp-up 0.15s ease-out;
+}
+
+.menuHead {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+}
+
+.menuInitials {
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    font-weight: 600;
+}
+
+.menuWho {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menuName {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.menuEmail {
+    color: var(--muted);
+}
+
+.menuItem {
+    display: block;
+    width: 100%;
+    padding: 14px 18px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    text-align: left;
+    letter-spacing: 0.06em;
+    font-size: 0.75rem;
+}
+
+.menuItem:hover {
+    background: var(--s2);
+}
+
+/* Phone tab bar */
+.tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    height: var(--tabbar-h);
+    padding-bottom: env(safe-area-inset-bottom);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+}
+
+.tab,
+.tabAdd {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: -1px;
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-top: 2px solid transparent;
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    background: var(--bg);
+}
+
+.tabActive {
+    color: var(--text);
+    border-top-color: var(--primary);
+}
+
+.tabAdd {
+    background: var(--primary);
+    color: var(--bg);
+    font-size: 1.75rem;
+}
+
+.desktopOnly {
+    display: flex;
+}
+
+.phoneOnly,
+.phoneOnlyBlock {
+    display: none;
+}
+
+@media (max-width: 719px) {
+    .desktopOnly {
+        display: none;
+    }
+
+    .phoneOnly {
+        display: flex;
+    }
+
+    .tabbar.phoneOnly {
+        display: grid;
+    }
+
+    .phoneOnlyBlock {
+        display: block;
+    }
+
+    .main {
+        padding-bottom: calc(var(--tabbar-h) + 16px);
+    }
+
+    /* Account menu becomes a bottom sheet */
+    .menuOverlay {
+        background: rgba(0, 0, 0, 0.65);
+    }
+
+    .menu {
+        top: auto;
+        left: 0;
+        bottom: 0;
+        width: auto;
+        border: 0;
+        border-top: 1px solid var(--line);
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        font-size: 0.8125rem;
+        animation-duration: 0.18s;
+    }
+
+    .menuHead {
+        padding: 20px;
+    }
+
+    .menuInitials {
+        display: flex;
+    }
+
+    .menuName {
+        font-size: 0.9375rem;
+    }
+
+    .menuEmail {
+        font-size: 0.75rem;
+    }
+
+    .menuItem {
+        padding: 18px 20px;
+        font-size: 0.8125rem;
+    }
+
+    .signOut {
+        color: var(--danger);
+    }
+}

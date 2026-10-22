@@ -1,0 +1,12 @@
+.tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 20px;
+    padding: 0 4px;
+    border: 1px solid;
+    font-size: 0.625rem;
+    letter-spacing: 0.04em;
+    flex: none;
+}

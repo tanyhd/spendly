@@ -1,0 +1,38 @@
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: stretch;
+    max-width: calc(100vw - 24px);
+    background: var(--text);
+    color: var(--bg);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    animation: sp-up 0.18s ease-out;
+}
+
+.msg {
+    padding: 13px 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.undo {
+    border: 0;
+    border-left: 1px solid #BDBDBD;
+    background: transparent;
+    padding: 0 16px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #D9430A;
+}
+
+@media (max-width: 719px) {
+    .toast {
+        bottom: calc(var(--tabbar-h) + 16px);
+    }
+}
