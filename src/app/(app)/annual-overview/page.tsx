@@ -1,48 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import cx from 'classnames';
-import {
-    AreaChart, Area, XAxis, CartesianGrid,
-    Tooltip, ResponsiveContainer, ReferenceLine,
-} from 'recharts';
-import styles from './AnnualOverview.module.css';
 import type { MonthData } from '@/services/budget';
-import YearPicker from '@/common/components/YearPicker';
+import { MONTHS_SHORT, fmt } from '@/lib/format';
+import styles from './AnnualOverview.module.css';
 
-const MONTH_ABBRS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_ABBRS = MONTHS_SHORT;
 const VAR_ORDER = ['Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Education', 'Utilities', 'Others'];
 
-function fmt(n: number): string {
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function fmtNum(n: number): string {
-    if (n === 0) return '0';
-    return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
-
-function ChartTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
-    const value: number = payload[0].value;
-    return (
-        <div style={{
-            background: '#191829', border: '1px solid #2A2840',
-            borderRadius: '0.5rem', padding: '0.5rem 0.875rem',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-        }}>
-            <div style={{ fontWeight: 600, color: '#FFFFFF', marginBottom: '0.125rem' }}>{label}</div>
-            <div style={{ color: value < 0 ? '#EF4444' : '#34D399' }}>
-                {value < 0 ? '-' : ''}${fmt(Math.abs(value))}
-            </div>
-        </div>
-    );
-}
-
-function CustomDot(props: any) {
-    const { cx: x, cy: y, value } = props;
-    if (value === 0) return null;
-    return <circle cx={x} cy={y} r={3.5} fill={value < 0 ? '#EF4444' : '#8B5CF6'} stroke="#191829" strokeWidth={1.5} />;
+/** "+1,234.00" / "−56.00" */
+function fmtNet(v: number): string {
+    return `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v))}`;
 }
 
 function exportCSV(
@@ -109,22 +78,39 @@ function exportCSV(
     URL.revokeObjectURL(url);
 }
 
+type Line = {
+    label: string;
+    tag?: 'FIX' | 'DAY';
+    values: (number | null)[];
+    total: number | null;
+    strong?: boolean;
+    signed?: boolean;
+    pct?: boolean;
+    color?: (v: number) => string;
+    totalColor?: string;
+};
+
 export default function AnnualOverviewPage() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const [year, setYear] = useState(currentYear);
     const [months, setMonths] = useState<MonthData[] | null>(null);
     const [loading, setLoading] = useState(true);
-
+    const [hover, setHover] = useState<number | null>(null);
+    const [closed, setClosed] = useState<Record<string, boolean>>({});
+    const [view, setView] = useState<'list' | 'table'>('list');
+    const [openMonth, setOpenMonth] = useState<number | null>(null);
 
     useEffect(() => {
         setLoading(true);
         setMonths(null);
+        setHover(null);
+        setOpenMonth(year === currentYear ? new Date().getMonth() : null);
         fetch(`/api/annual-overview/${year}`)
             .then(r => r.ok ? r.json() : null)
             .then(d => setMonths(d?.months ?? null))
             .finally(() => setLoading(false));
-    }, [year]);
+    }, [year, currentYear]);
 
     const computed = useMemo(() => {
         if (!months) return null;
@@ -191,19 +177,26 @@ export default function AnnualOverviewPage() {
             ? validPctMonths.reduce((s, m) => s + (savingsPctByMonth[m] ?? 0), 0) / validPctMonths.length
             : null;
 
-        const chartData = MONTH_ABBRS.map((month, i) => ({ month, savings: netSavingsByMonth[i] }));
+        // A month counts as having data if it has a saved plan or any daily entries
+        const active = months.map(m => m.income.length + m.fixedExpenses.length + m.variable.length > 0);
+        const thisMonth = new Date().getMonth();
+        const future = months.map((_, i) => year > currentYear || (year === currentYear && i > thisMonth));
+        const topDaily = months.map(m => [...m.variable].sort((a, b) => b.total - a.total).slice(0, 2));
 
         return {
             incomeLabels, fixedLabels, varCats,
             incomeMatrix, fixedMatrix, varMatrix,
-            totalIncomeByMonth, totalExpensesByMonth, netSavingsByMonth, savingsPctByMonth,
-            totalIncomeTotal, totalExpensesTotal, netSavingsTotal, avgSavingsPct,
-            chartData,
+            totalIncomeByMonth, totalFixedByMonth, totalVariableByMonth, totalExpensesByMonth,
+            netSavingsByMonth, savingsPctByMonth,
+            totalIncomeTotal, totalExpensesTotal, netSavingsTotal, avgSavingsPct, validPctMonths,
+            active, future, topDaily,
         };
-    }, [months]);
+    }, [months, year, currentYear]);
+
+    const hasData = !!computed && computed.active.some(Boolean);
 
     function handleExport() {
-        if (!computed) return;
+        if (!computed || !hasData) return;
         exportCSV(
             year,
             computed.incomeLabels, computed.fixedLabels, computed.varCats,
@@ -213,199 +206,277 @@ export default function AnnualOverviewPage() {
         );
     }
 
-    function fmtCell(v: number) {
-        return fmtNum(v);
-    }
+    const toolbar = (
+        <div className={styles.toolbar}>
+            <button className={styles.navBtn} onClick={() => setYear(y => y - 1)} aria-label="Previous year">‹</button>
+            <span className={styles.yearLabel}>{year}</span>
+            <button className={styles.navBtn} onClick={() => setYear(y => y + 1)} aria-label="Next year">›</button>
+            {hasData && computed && (
+                <span className={styles.coverage}>
+                    {computed.active.filter(Boolean).length} OF 12 MONTHS WITH DATA
+                    {computed.future.some(Boolean) && ` · ${computed.future.filter(Boolean).length} UPCOMING`}
+                </span>
+            )}
+            <button className={styles.exportBtn} onClick={handleExport} disabled={!hasData}>↓ EXPORT CSV</button>
+        </div>
+    );
 
-    function fmtSavings(v: number) {
-        if (v === 0) return <span className={styles.zero}>0</span>;
+    if (loading || !computed || !hasData) {
         return (
-            <span className={v < 0 ? styles.negative : styles.positive}>
-                {v < 0 ? '-' : ''}{fmtNum(Math.abs(v))}
-            </span>
+            <div className={styles.page}>
+                {toolbar}
+                {loading ? (
+                    <div className={styles.loadingLine}>LOADING {year}<span className={styles.cursor}>_</span></div>
+                ) : (
+                    <div className={styles.empty}>
+                        <span className="label">{year}</span>
+                        <span className={styles.emptyTitle}>No data found for {year}.</span>
+                        <span className={styles.emptyText}>
+                            Save a monthly budget or log a daily expense in {year} and it&apos;ll show up here.
+                        </span>
+                    </div>
+                )}
+            </div>
         );
     }
 
-    function fmtPct(v: number | null) {
-        if (v === null) return <span className={styles.zero}>—</span>;
-        if (v === 0) return <span className={styles.zero}>0%</span>;
-        return (
-            <span className={v < 0 ? styles.negative : styles.positive}>
-                {Math.round(v)}%
-            </span>
-        );
+    const c = computed;
+    const rateOf = (i: number) => {
+        const p = c.savingsPctByMonth[i];
+        return p === null ? null : Math.max(0, Math.min(100, Math.round(p)));
+    };
+    const avgRate = c.avgSavingsPct === null ? null : Math.max(0, Math.round(c.avgSavingsPct));
+    const idle = (i: number) => c.future[i] && !c.active[i];
+
+    // Bar chart: zero line splits the height between the biggest gain and the biggest loss
+    const maxPos = Math.max(1, ...c.netSavingsByMonth.map(v => Math.max(0, v)));
+    const maxNeg = Math.max(0, ...c.netSavingsByMonth.map(v => Math.max(0, -v)));
+    const posShare = maxNeg ? maxPos / (maxPos + maxNeg) : 1;
+
+    const lines = (key: string): Line[] => {
+        if (key === 'inc') {
+            return c.incomeLabels.map((label, ri) => ({ label, values: c.incomeMatrix[ri], total: c.incomeMatrix[ri].reduce((s, v) => s + v, 0) }));
+        }
+        return [
+            ...c.fixedLabels.map((label, ri) => ({ label, tag: 'FIX' as const, values: c.fixedMatrix[ri], total: c.fixedMatrix[ri].reduce((s, v) => s + v, 0) })),
+            ...c.varCats.map((label, ri) => ({ label, tag: 'DAY' as const, values: c.varMatrix[ri], total: c.varMatrix[ri].reduce((s, v) => s + v, 0) })),
+        ];
+    };
+
+    const groups: { key: string; title: string; collapsible: boolean; body: Line[]; foot: Line[] }[] = [
+        {
+            key: 'inc', title: 'INCOME', collapsible: true, body: lines('inc'),
+            foot: [{ label: 'Total income', values: c.totalIncomeByMonth, total: c.totalIncomeTotal, strong: true, color: () => 'var(--income)', totalColor: 'var(--income)' }],
+        },
+        {
+            key: 'exp', title: 'EXPENSES', collapsible: true, body: lines('exp'),
+            foot: [{ label: 'Total expenses', values: c.totalExpensesByMonth, total: c.totalExpensesTotal, strong: true, color: () => 'var(--expense)', totalColor: 'var(--expense)' }],
+        },
+        {
+            key: 'sav', title: 'SAVINGS', collapsible: false, body: [],
+            foot: [
+                {
+                    label: 'Net savings', values: c.netSavingsByMonth, total: c.netSavingsTotal, strong: true, signed: true,
+                    color: v => v < 0 ? 'var(--neg)' : 'var(--pos)', totalColor: c.netSavingsTotal < 0 ? 'var(--neg)' : 'var(--pos)',
+                },
+                { label: 'Savings %', values: MONTH_ABBRS.map((_, i) => rateOf(i)), total: avgRate, pct: true },
+            ],
+        },
+    ];
+
+    function cellText(line: Line, v: number | null): string {
+        if (v === null) return '—';
+        if (line.pct) return `${v}%`;
+        if (v === 0) return '0';
+        return line.signed ? fmtNet(v) : fmt(v);
     }
 
-    const COLS = 14; // name + 12 months + total
+    function renderLine(line: Line) {
+        return (
+            <div key={line.label + (line.tag ?? '')} className={cx(styles.tr, line.strong && styles.trStrong)}>
+                <span className={styles.tdLabel}>
+                    {line.tag && <span className={cx(styles.tag, line.tag === 'DAY' && styles.tagDay)}>{line.tag}</span>}
+                    {line.label}
+                </span>
+                {line.values.map((v, i) => idle(i) ? (
+                    <span key={i} className={cx(styles.td, styles.tdIdle)}>·</span>
+                ) : (
+                    <span
+                        key={i}
+                        className={cx(styles.td, 'num', hover === i && styles.tdHover, (v === 0 || v === null) && styles.tdZero)}
+                        style={v ? { color: line.color?.(v) } : undefined}
+                    >
+                        {cellText(line, v)}
+                    </span>
+                ))}
+                <span className={cx(styles.tdTotal, 'num')} style={{ color: line.totalColor }}>
+                    {line.total === null ? '—' : line.pct ? `${line.total}%` : line.signed ? fmtNet(line.total) : fmt(line.total)}
+                </span>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.page}>
-            <div className={styles.header}>
-                <div className={styles.headerLeft}>
-                    <h1 className="pageTitle" style={{ marginBottom: 0 }}>Annual Overview</h1>
-                    <YearPicker year={year} onChange={setYear} />
+            {toolbar}
+
+            <div className={styles.kpis}>
+                <div className={cx(styles.kpi, styles.kpiNet)}>
+                    <span className="label">Net savings · {year}</span>
+                    <span className={cx(styles.netValue, 'num')} style={{ color: c.netSavingsTotal < 0 ? 'var(--neg)' : 'var(--pos)' }}>
+                        {fmtNet(c.netSavingsTotal)}
+                    </span>
                 </div>
-                <button className={styles.exportBtn} onClick={handleExport} disabled={!computed}>
-                    ↓ Export CSV
-                </button>
+                <div className={styles.kpi}>
+                    <span className="label">Income</span>
+                    <span className={cx(styles.kpiValue, 'num')} style={{ color: 'var(--income)' }}>{fmt(c.totalIncomeTotal)}</span>
+                </div>
+                <div className={styles.kpi}>
+                    <span className="label">Spent</span>
+                    <span className={cx(styles.kpiValue, 'num')} style={{ color: 'var(--expense)' }}>{fmt(c.totalExpensesTotal)}</span>
+                </div>
+                <div className={cx(styles.kpi, styles.kpiRate)}>
+                    <span className="label">Avg savings rate</span>
+                    <span className={cx(styles.kpiValue, 'num')}>{avgRate === null ? '—' : `${avgRate}%`}</span>
+                    <span className={styles.note}>{c.validPctMonths.length} MONTHS WITH INCOME</span>
+                </div>
             </div>
 
-            {loading ? (
-                <p className={styles.loading}>Loading...</p>
-            ) : !computed ? (
-                <p className={styles.loading}>No data found for {year}.</p>
-            ) : (
-                <>
-                    {/* Savings Trend Chart */}
-                    <div className={styles.chartCard}>
-                        <div className={styles.chartCardHeader}>
-                            <span className={styles.chartTitle}>Monthly Savings Trend</span>
-                            <div className={styles.chartTotal}>
-                                <span className={styles.chartTotalLabel}>Yearly Savings</span>
-                                <span className={cx(
-                                    styles.chartTotalValue,
-                                    computed.netSavingsTotal >= 0 ? styles.chartTotalPositive : styles.chartTotalNegative
-                                )}>
-                                    {computed.netSavingsTotal < 0 ? '-' : ''}${fmt(Math.abs(computed.netSavingsTotal))}
-                                </span>
+            <div className={styles.chartBlock}>
+                <div className={styles.chartHead}>
+                    <span>NET SAVINGS BY MONTH</span>
+                    <span className={styles.chartLegend}>
+                        <span><span className={styles.swatch} style={{ background: 'var(--pos)' }} />SAVED</span>
+                        <span><span className={styles.swatch} style={{ background: 'var(--neg)' }} />OVERSPENT</span>
+                    </span>
+                </div>
+                <div className={styles.chart} onMouseLeave={() => setHover(null)}>
+                    {c.netSavingsByMonth.map((net, i) => {
+                        const isIdle = idle(i);
+                        const faded = hover !== null && hover !== i;
+                        return (
+                            <div
+                                key={i}
+                                className={cx(styles.barCol, hover === i && styles.barColHover)}
+                                onMouseEnter={() => setHover(i)}
+                                onClick={() => setHover(i)}
+                            >
+                                <div className={styles.posPart} style={{ flex: posShare }}>
+                                    <div className={styles.posBar} style={{ height: net > 0 ? `${(net / maxPos) * 100}%` : 0, opacity: faded ? 0.45 : 1 }} />
+                                </div>
+                                <div className={styles.negPart} style={{ flex: 1 - posShare }}>
+                                    <div className={styles.negBar} style={{ height: net < 0 && maxNeg ? `${(-net / maxNeg) * 100}%` : 0, opacity: faded ? 0.45 : 1 }} />
+                                </div>
+                                {isIdle && <div className={styles.upcoming}>UPCOMING</div>}
+                                {hover === i && !isIdle && (
+                                    <div className={cx(styles.tip, i > 8 && styles.tipRight)}>
+                                        <span className={styles.tipTitle}>{MONTH_ABBRS[i].toUpperCase()} {year}</span>
+                                        <span className={styles.tipRow}><span>INCOME</span><span>{fmt(c.totalIncomeByMonth[i])}</span></span>
+                                        <span className={styles.tipRow}><span>EXPENSES</span><span>{fmt(c.totalExpensesByMonth[i])}</span></span>
+                                        <span className={cx(styles.tipRow, styles.tipNet)} style={{ color: net < 0 ? '#D12C4A' : '#11834F' }}>
+                                            <span>NET</span><span>{fmtNet(net)}</span>
+                                        </span>
+                                        <span className={styles.tipRow}><span>RATE</span><span>{rateOf(i) === null ? '—' : `${rateOf(i)}%`}</span></span>
+                                    </div>
+                                )}
                             </div>
+                        );
+                    })}
+                </div>
+                <div className={styles.chartLabels}>
+                    {MONTH_ABBRS.map((m, i) => (
+                        <span
+                            key={m}
+                            style={{ color: c.future[i] ? 'var(--faint)' : c.netSavingsByMonth[i] < 0 ? 'var(--neg)' : undefined }}
+                        >
+                            {m.toUpperCase()}
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            {/* Phone: month list or full table */}
+            <div className={styles.viewTabs}>
+                <button className={cx(styles.viewTab, view === 'list' && styles.viewTabActive)} onClick={() => setView('list')}>BY MONTH</button>
+                <button className={cx(styles.viewTab, view === 'table' && styles.viewTabActive)} onClick={() => setView('table')}>FULL TABLE</button>
+            </div>
+
+            <div className={cx(styles.monthList, view !== 'list' && styles.phoneHidden)}>
+                {MONTH_ABBRS.map((m, i) => {
+                    const isIdle = idle(i);
+                    const open = openMonth === i && !isIdle;
+                    const net = c.netSavingsByMonth[i];
+                    const rate = rateOf(i);
+                    const top = c.topDaily[i].map(t => `${t.category} ${fmt(t.total)}`).join(' · ');
+                    return (
+                        <div key={m} className={cx(styles.monthCard, open && styles.monthCardOpen)}>
+                            <button
+                                className={styles.monthHead}
+                                onClick={() => !isIdle && setOpenMonth(open ? null : i)}
+                                disabled={isIdle}
+                            >
+                                <span className={styles.monthName} style={{ color: isIdle ? 'var(--faint)' : undefined }}>{m.toUpperCase()}</span>
+                                <span className={cx(styles.monthNet, 'num')} style={{ color: isIdle ? 'var(--faint)' : net < 0 ? 'var(--neg)' : 'var(--pos)' }}>
+                                    {isIdle ? 'UPCOMING' : fmtNet(net)}
+                                </span>
+                                <span className={styles.monthRate}>{isIdle ? '' : rate === null ? '—' : `${rate}%`}</span>
+                                {!isIdle && <span className={cx(styles.chev, open && styles.chevUp)} aria-hidden="true" />}
+                            </button>
+                            {open && (
+                                <div className={styles.monthBody}>
+                                    <span className={styles.monthLine}><span>INCOME</span><span style={{ color: 'var(--income)' }}>{fmt(c.totalIncomeByMonth[i])}</span></span>
+                                    <span className={styles.monthLine}><span>FIXED</span><span>{fmt(c.totalFixedByMonth[i])}</span></span>
+                                    <span className={styles.monthLine}><span>DAILY</span><span>{fmt(c.totalVariableByMonth[i])}</span></span>
+                                    <span className={cx(styles.monthLine, styles.monthTotal)}>
+                                        <span>TOTAL EXPENSES</span><span style={{ color: 'var(--expense)' }}>{fmt(c.totalExpensesByMonth[i])}</span>
+                                    </span>
+                                    <span className={styles.monthTop}>{top ? `TOP DAILY · ${top.toUpperCase()}` : 'NO DAILY ENTRIES'}</span>
+                                </div>
+                            )}
                         </div>
-                        <ResponsiveContainer width="100%" height={200}>
-                            <AreaChart data={computed.chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="savingsGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.25} />
-                                        <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#2A2840" vertical={false} />
-                                <XAxis
-                                    dataKey="month"
-                                    tick={{ fill: '#8B8FA8', fontSize: 11 }}
-                                    axisLine={false}
-                                    tickLine={false}
-                                />
-                                <ReferenceLine y={0} stroke="#4B4D6B" strokeDasharray="4 4" />
-                                <Tooltip content={<ChartTooltip />} wrapperStyle={{ zIndex: 50 }} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="savings"
-                                    stroke="#8B5CF6"
-                                    strokeWidth={2}
-                                    fill="url(#savingsGradient)"
-                                    dot={<CustomDot />}
-                                    activeDot={{ r: 5, fill: '#8B5CF6' }}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
+                    );
+                })}
+            </div>
 
-                    {/* Annual Table */}
-                    <div className={styles.tableCard}>
-                        <div className={styles.tableWrap}>
-                            <table className={styles.table}>
-                                <thead>
-                                    <tr>
-                                        <th>Category</th>
-                                        {MONTH_ABBRS.map(m => <th key={m}>{m}</th>)}
-                                        <th className={styles.totalCol}>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {/* Income */}
-                                    <tr className={styles.sectionRow}>
-                                        <td>Income</td>
-                                        <td colSpan={COLS - 1} />
-                                    </tr>
-                                    {computed.incomeLabels.map((label, ri) => {
-                                        const row = computed.incomeMatrix[ri];
-                                        const total = row.reduce((s, v) => s + v, 0);
-                                        return (
-                                            <tr key={label}>
-                                                <td>{label}</td>
-                                                {row.map((v, mi) => <td key={mi}>{fmtCell(v)}</td>)}
-                                                <td className={styles.totalCol}>{fmtCell(total)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {computed.incomeLabels.length === 0 && (
-                                        <tr>
-                                            <td colSpan={COLS} style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem' }}>
-                                                No income data saved for {year}
-                                            </td>
-                                        </tr>
-                                    )}
-                                    <tr className={styles.totalRow}>
-                                        <td>Total Income</td>
-                                        {computed.totalIncomeByMonth.map((v, mi) => <td key={mi} className={styles.totalValue}>{fmtCell(v)}</td>)}
-                                        <td className={cx(styles.totalCol, styles.totalValue)}>{fmtCell(computed.totalIncomeTotal)}</td>
-                                    </tr>
-
-                                    {/* Expenses */}
-                                    <tr className={styles.sectionRow}>
-                                        <td>Expenses</td>
-                                        <td colSpan={COLS - 1} />
-                                    </tr>
-                                    {computed.fixedLabels.map((label, ri) => {
-                                        const row = computed.fixedMatrix[ri];
-                                        const total = row.reduce((s, v) => s + v, 0);
-                                        return (
-                                            <tr key={`fixed-${label}`}>
-                                                <td>{label}</td>
-                                                {row.map((v, mi) => <td key={mi}>{fmtCell(v)}</td>)}
-                                                <td className={styles.totalCol}>{fmtCell(total)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {computed.varCats.map((cat, ri) => {
-                                        const row = computed.varMatrix[ri];
-                                        const total = row.reduce((s, v) => s + v, 0);
-                                        return (
-                                            <tr key={`var-${cat}`}>
-                                                <td>{cat}</td>
-                                                {row.map((v, mi) => <td key={mi}>{fmtCell(v)}</td>)}
-                                                <td className={styles.totalCol}>{fmtCell(total)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {computed.fixedLabels.length === 0 && computed.varCats.length === 0 && (
-                                        <tr>
-                                            <td colSpan={COLS} style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '0.75rem' }}>
-                                                No expense data for {year}
-                                            </td>
-                                        </tr>
-                                    )}
-                                    <tr className={styles.totalRow}>
-                                        <td>Total Expenses</td>
-                                        {computed.totalExpensesByMonth.map((v, mi) => <td key={mi} className={styles.totalValue}>{fmtCell(v)}</td>)}
-                                        <td className={cx(styles.totalCol, styles.totalValue)}>{fmtCell(computed.totalExpensesTotal)}</td>
-                                    </tr>
-
-                                    {/* Savings */}
-                                    <tr className={styles.sectionRow}>
-                                        <td>Savings</td>
-                                        <td colSpan={COLS - 1} />
-                                    </tr>
-                                    <tr>
-                                        <td>Net Savings</td>
-                                        {computed.netSavingsByMonth.map((v, mi) => (
-                                            <td key={mi}>{fmtSavings(v)}</td>
-                                        ))}
-                                        <td className={styles.totalCol}>{fmtSavings(computed.netSavingsTotal)}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Savings %</td>
-                                        {computed.savingsPctByMonth.map((v, mi) => (
-                                            <td key={mi}>{fmtPct(v)}</td>
-                                        ))}
-                                        <td className={styles.totalCol}>{fmtPct(computed.avgSavingsPct)}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+            <div className={cx(styles.tableWrap, view !== 'table' && styles.phoneHidden)}>
+                <div className={styles.tableScroll}>
+                    <div className={styles.table}>
+                        <div className={cx(styles.tr, styles.thead)}>
+                            <span className={styles.tdLabel}>CATEGORY</span>
+                            {MONTH_ABBRS.map((m, i) => (
+                                <span
+                                    key={m}
+                                    className={cx(styles.td, hover === i && styles.tdHover)}
+                                    style={{ color: c.future[i] ? 'var(--faint)' : hover === i ? 'var(--text)' : undefined }}
+                                >
+                                    {m.toUpperCase()}
+                                </span>
+                            ))}
+                            <span className={styles.tdTotal}>TOTAL</span>
                         </div>
+                        {groups.map(g => (
+                            <Fragment key={g.key}>
+                                <button
+                                    className={cx(styles.tr, styles.groupRow)}
+                                    onClick={() => g.collapsible && setClosed(s => ({ ...s, [g.key]: !s[g.key] }))}
+                                    disabled={!g.collapsible}
+                                    aria-expanded={!closed[g.key]}
+                                >
+                                    <span className={styles.tdLabel}>
+                                        <span className={cx(styles.groupCaret, closed[g.key] && styles.groupCaretClosed)} aria-hidden="true" />
+                                        {g.title}
+                                    </span>
+                                </button>
+                                {!closed[g.key] && g.body.map(renderLine)}
+                                {g.foot.map(renderLine)}
+                            </Fragment>
+                        ))}
                     </div>
-                </>
-            )}
+                </div>
+                <div className={styles.footnote}>
+                    FIX = FROM MONTHLY BUDGET · DAY = FROM DAILY LOG · YEARLY SAVINGS % = AVERAGE OF MONTHS WITH INCOME · CLICK A SECTION TO COLLAPSE
+                </div>
+            </div>
         </div>
     );
 }
