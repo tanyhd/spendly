@@ -16,5 +16,5 @@
 }
 
 .neg {
-    background: #3A1A20;
+    background: var(--neg-track);
 }

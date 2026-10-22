@@ -290,7 +290,7 @@
 }
 
 .monthCardOpen {
-    background: #121212;
+    background: var(--sec);
 }
 
 .monthHead {
@@ -380,7 +380,7 @@
     display: grid;
     grid-template-columns: 200px repeat(12, minmax(70px, 1fr)) 104px;
     width: 100%;
-    border-bottom: 1px solid #1A1A1A;
+    border-bottom: 1px solid var(--row2);
 }
 
 .thead {
@@ -391,7 +391,7 @@
 }
 
 .trStrong {
-    background: #141414;
+    background: var(--strong);
     border-bottom-color: var(--line);
     font-weight: 600;
 }
@@ -409,11 +409,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #BDBDBD;
+    color: var(--soft);
 }
 
 .trStrong .tdLabel {
-    background: #141414;
+    background: var(--strong);
     color: var(--text);
 }
 
@@ -435,8 +435,8 @@
 }
 
 .tdIdle {
-    background: #0B0B0B;
-    color: #333333;
+    background: var(--future);
+    color: var(--line2);
 }
 
 .tdTotal {
@@ -454,7 +454,7 @@
 .tag {
     padding: 0 3px;
     border: 1px solid var(--faint);
-    color: #BDBDBD;
+    color: var(--soft);
     font-size: 0.5625rem;
 }
 
@@ -466,12 +466,12 @@
 .groupRow {
     border: 0;
     border-bottom: 1px solid var(--line);
-    background: #121212;
+    background: var(--sec);
     text-align: left;
 }
 
 .groupRow .tdLabel {
-    background: #121212;
+    background: var(--sec);
     font-size: 0.625rem;
     font-weight: 600;
     letter-spacing: 0.08em;

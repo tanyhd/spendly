@@ -189,6 +189,16 @@
     background: var(--s2);
 }
 
+.menuSplit {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.menuHint {
+    color: var(--muted);
+}
+
 /* Phone tab bar */
 .tabbar {
     position: fixed;
@@ -262,7 +272,7 @@
 
     /* Account menu becomes a bottom sheet */
     .menuOverlay {
-        background: rgba(0, 0, 0, 0.65);
+        background: var(--scrim);
     }
 
     .menu {

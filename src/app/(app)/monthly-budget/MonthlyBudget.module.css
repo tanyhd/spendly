@@ -91,7 +91,7 @@
 
 .saveDone,
 .saveDone:hover {
-    background: #123A26;
+    background: var(--ok-bg);
     color: var(--pos);
 }
 
@@ -113,7 +113,7 @@
     align-items: stretch;
     flex-wrap: wrap;
     border-bottom: 1px solid var(--line);
-    background: #1F1410;
+    background: var(--warn);
     font-size: 0.75rem;
 }
 
@@ -219,7 +219,7 @@
     grid-template-columns: 104px minmax(0, 1fr) 150px 44px;
     align-items: stretch;
     min-height: 48px;
-    border-bottom: 1px solid #1A1A1A;
+    border-bottom: 1px solid var(--row2);
 }
 
 .pill {
@@ -228,7 +228,7 @@
     gap: 6px;
     padding: 0 10px 0 20px;
     border: 0;
-    border-right: 1px solid #1A1A1A;
+    border-right: 1px solid var(--row2);
     background: transparent;
     font-size: 0.6875rem;
     letter-spacing: 0.06em;
@@ -271,7 +271,7 @@
     display: flex;
     align-items: center;
     padding-left: 10px;
-    border-left: 1px solid #1A1A1A;
+    border-left: 1px solid var(--row2);
     color: var(--dim);
     font-size: 0.75rem;
 }
@@ -296,14 +296,14 @@
 
 .removeBtn {
     border: 0;
-    border-left: 1px solid #1A1A1A;
+    border-left: 1px solid var(--row2);
     background: transparent;
     color: var(--dim);
     font-size: 0.75rem;
 }
 
 .removeBtn:hover {
-    background: #2A1418;
+    background: var(--neg-hover);
     color: var(--danger);
 }
 
@@ -384,9 +384,9 @@
     gap: 10px;
     min-height: 42px;
     padding: 0 20px;
-    border-bottom: 1px solid #1A1A1A;
+    border-bottom: 1px solid var(--row2);
     font-size: 0.8125rem;
-    color: #BDBDBD;
+    color: var(--soft);
 }
 
 .varAmt {
@@ -395,7 +395,7 @@
 
 .varEmpty {
     padding: 16px 20px;
-    border-bottom: 1px solid #1A1A1A;
+    border-bottom: 1px solid var(--row2);
     font-family: var(--font-sans);
     font-size: 0.8125rem;
     color: var(--dim);

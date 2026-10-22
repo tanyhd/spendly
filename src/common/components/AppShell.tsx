@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useExpense } from '@/context/ExpenseContext';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { initials } from '@/lib/format';
+import { useTheme } from '@/lib/theme';
 import styles from './AppShell.module.css';
 
 const NAV = [
@@ -24,6 +25,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const { user, logout } = useAuth();
     const { openAdd, isOpen: sheetOpen } = useExpense();
     const { leave } = useNavigationGuard();
+    const { theme, toggle: toggleTheme } = useTheme();
     // The menu belongs to the page it was opened on, so navigating closes it
     const [menuPath, setMenuPath] = useState<string | null>(null);
     const menuOpen = menuPath === pathname;
@@ -111,6 +113,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
                             </div>
                         </div>
                         <Link href="/settings" className={cx(styles.menuItem, styles.phoneOnlyBlock)}>SETTINGS</Link>
+                        <button className={cx(styles.menuItem, styles.menuSplit)} onClick={toggleTheme}>
+                            <span>APPEARANCE</span>
+                            <span className={styles.menuHint}>{theme === 'light' ? 'LIGHT · SWITCH TO DARK' : 'DARK · SWITCH TO LIGHT'}</span>
+                        </button>
                         <button className={cx(styles.menuItem, styles.signOut)} onClick={() => { setMenuOpen(false); leave(logout); }}>SIGN OUT</button>
                     </div>
                 </>

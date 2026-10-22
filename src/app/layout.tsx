@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google';
+import { THEME_INIT_SCRIPT } from '@/lib/themeScript';
 import './globals.css';
 
 const plexMono = IBM_Plex_Mono({
@@ -23,7 +24,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
-        <html lang="en" className={`${plexMono.variable} ${plexSans.variable}`}>
+        // data-theme is set by the inline script before hydration, so React must not flag the mismatch
+        <html lang="en" className={`${plexMono.variable} ${plexSans.variable}`} data-theme="dark" suppressHydrationWarning>
+            <head>
+                <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+            </head>
             <body>{children}</body>
         </html>
     );

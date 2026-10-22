@@ -378,7 +378,7 @@ export default function AnnualOverviewPage() {
                                         <span className={styles.tipTitle}>{MONTH_ABBRS[i].toUpperCase()} {year}</span>
                                         <span className={styles.tipRow}><span>INCOME</span><span>{fmt(c.totalIncomeByMonth[i])}</span></span>
                                         <span className={styles.tipRow}><span>EXPENSES</span><span>{fmt(c.totalExpensesByMonth[i])}</span></span>
-                                        <span className={cx(styles.tipRow, styles.tipNet)} style={{ color: net < 0 ? '#D12C4A' : '#11834F' }}>
+                                        <span className={cx(styles.tipRow, styles.tipNet)} style={{ color: net < 0 ? 'var(--tip-neg)' : 'var(--tip-pos)' }}>
                                             <span>NET</span><span>{fmtNet(net)}</span>
                                         </span>
                                         <span className={styles.tipRow}><span>RATE</span><span>{rateOf(i) === null ? '—' : `${rateOf(i)}%`}</span></span>

@@ -1,15 +1,25 @@
 ﻿@import "tailwindcss";
 
+/* Dark is the default theme; [data-theme="light"] on <html> switches every token below */
 :root {
+  color-scheme: dark;
+
   /* Surfaces */
   --bg: #0E0E0E;
   --surface: #161616;
   --s2: #1C1C1C;
   --line: #2A2A2A;
+  --line2: #333333;
   --row: #1E1E1E;
+  --row2: #1A1A1A;
+  --sec: #121212;
+  --strong: #141414;
+  --future: #0B0B0B;
+  --scrim: rgba(0, 0, 0, 0.65);
 
   /* Text */
   --text: #EDEDED;
+  --soft: #BDBDBD;
   --muted: #8C8C8C;
   --dim: #5F5F5F;
   --faint: #444444;
@@ -18,19 +28,53 @@
   --primary: #FF5B1F;
   --primary-hover: #FF7340;
   --primary-tint: #241510;
+  --today: #120F0D;
+  --warn: #1F1410;
   --income: #9DB8FF;
-  --expense: #FF5B1F;
+  --expense: var(--primary);
   --pos: #3CE08B;
   --neg: #FF4D6A;
-  --danger: #FF4D6A;
-  --danger-tint: #1F0D10;
+  --danger: var(--neg);
+  --ok-bg: #123A26;
+  --err-bd: #6B2030;
+  --err-bg: #1E0F12;
+  --neg-hover: #2A1418;
+  --neg-track: #3A1A20;
+  --danger-bg: #140A0C;
+  --danger-line: #4A1E26;
+
+  /* Colours used on the inverted (text-coloured) tooltip and toast */
+  --tip-neg: #D12C4A;
+  --tip-pos: #11834F;
+  --tip-primary: #D9430A;
+  --tip-line: #BDBDBD;
 
   /* Heatmap steps (less → more) */
-  --heat-0: #1C1C1C;
+  --heat-0: var(--s2);
   --heat-1: #3A1F14;
   --heat-2: #6B2E15;
   --heat-3: #B2431A;
-  --heat-4: #FF5B1F;
+  --heat-4: var(--primary);
+
+  /* Categories: daily, fixed (greys), income (blues) */
+  --c-food: #FFB13D;
+  --c-transport: #4FB3FF;
+  --c-shopping: #FF5FA2;
+  --c-health: #3CE0C0;
+  --c-ent: #A98BFF;
+  --c-edu: #F2E25A;
+  --c-util: #C6E04A;
+  --c-others: var(--muted);
+  --f1: #D4D4D4;
+  --f2: #A8A8A8;
+  --f3: #868686;
+  --f4: #6A6A6A;
+  --f5: #525252;
+  --f6: #3E3E3E;
+  --i1: var(--income);
+  --i2: #7A98E0;
+  --i3: #5D7BC4;
+  --i4: #44609E;
 
   /* Layout */
   --bar-h: 52px;
@@ -38,6 +82,70 @@
 
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-sans: var(--font-plex-sans), Arial, sans-serif;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #F5F5F3;
+  --surface: #FFFFFF;
+  --s2: #EAEAE6;
+  --line: #D6D6D2;
+  --line2: #CFCFCA;
+  --row: #E4E4E0;
+  --row2: #E9E9E5;
+  --sec: #EFEFEC;
+  --strong: #ECECE8;
+  --future: #EFEFEC;
+  --scrim: rgba(20, 20, 18, 0.35);
+
+  --text: #111111;
+  --soft: #3A3A37;
+  --muted: #5F5F5B;
+  --dim: #75756F;
+  --faint: #A3A39E;
+
+  --primary: #D9430A;
+  --primary-hover: #C23A06;
+  --primary-tint: #FBE3D6;
+  --today: #FCF1EA;
+  --warn: #FCEBDF;
+  --income: #2952CC;
+  --pos: #11834F;
+  --neg: #D12C4A;
+  --ok-bg: #D6F0E1;
+  --err-bd: #E8A3AF;
+  --err-bg: #FDEEF0;
+  --neg-hover: #FBE4E8;
+  --neg-track: #F6D4DA;
+  --danger-bg: #FFF5F6;
+  --danger-line: #F0C2CA;
+
+  --tip-neg: #FF6F86;
+  --tip-pos: #3CE08B;
+  --tip-primary: #FF7340;
+  --tip-line: #3A3A37;
+
+  --heat-1: #F8D9C8;
+  --heat-2: #F0AC86;
+  --heat-3: #E57A45;
+
+  --c-food: #C77A00;
+  --c-transport: #1F7FD1;
+  --c-shopping: #C7366F;
+  --c-health: #0F9480;
+  --c-ent: #6E4FD8;
+  --c-edu: #958600;
+  --c-util: #5F8A14;
+  --f1: #2B2B2B;
+  --f2: #4D4D4D;
+  --f3: #6E6E6E;
+  --f4: #8E8E8E;
+  --f5: #ADADAD;
+  --f6: #C8C8C8;
+  --i2: #5A7FE0;
+  --i3: #8AA4EA;
+  --i4: #B4C6F2;
 }
 
 *, *::before, *::after {

@@ -1,33 +1,34 @@
+/** `color` is a CSS colour (a theme variable), usable in inline styles */
 export type Category = { id: string; code: string; color: string };
 
 export const DAILY_CATEGORIES: Category[] = [
-    { id: 'Food', code: 'FOO', color: '#FFB13D' },
-    { id: 'Transport', code: 'TRN', color: '#4FB3FF' },
-    { id: 'Shopping', code: 'SHP', color: '#FF5FA2' },
-    { id: 'Health', code: 'HLT', color: '#3CE0C0' },
-    { id: 'Entertainment', code: 'ENT', color: '#A98BFF' },
-    { id: 'Education', code: 'EDU', color: '#F2E25A' },
-    { id: 'Utilities', code: 'UTL', color: '#C6E04A' },
-    { id: 'Others', code: 'OTH', color: '#8C8C8C' },
+    { id: 'Food', code: 'FOO', color: 'var(--c-food)' },
+    { id: 'Transport', code: 'TRN', color: 'var(--c-transport)' },
+    { id: 'Shopping', code: 'SHP', color: 'var(--c-shopping)' },
+    { id: 'Health', code: 'HLT', color: 'var(--c-health)' },
+    { id: 'Entertainment', code: 'ENT', color: 'var(--c-ent)' },
+    { id: 'Education', code: 'EDU', color: 'var(--c-edu)' },
+    { id: 'Utilities', code: 'UTL', color: 'var(--c-util)' },
+    { id: 'Others', code: 'OTH', color: 'var(--c-others)' },
 ];
 
 export const FIXED_CATEGORIES: Category[] = [
-    { id: 'Housing', code: 'HSG', color: '#D4D4D4' },
-    { id: 'Tax', code: 'TAX', color: '#A8A8A8' },
-    { id: 'Insurance', code: 'INS', color: '#868686' },
-    { id: 'Education', code: 'EDU', color: '#6A6A6A' },
-    { id: 'Family', code: 'FAM', color: '#525252' },
-    { id: 'Other', code: 'OTH', color: '#3E3E3E' },
+    { id: 'Housing', code: 'HSG', color: 'var(--f1)' },
+    { id: 'Tax', code: 'TAX', color: 'var(--f2)' },
+    { id: 'Insurance', code: 'INS', color: 'var(--f3)' },
+    { id: 'Education', code: 'EDU', color: 'var(--f4)' },
+    { id: 'Family', code: 'FAM', color: 'var(--f5)' },
+    { id: 'Other', code: 'OTH', color: 'var(--f6)' },
 ];
 
 export const INCOME_CATEGORIES: Category[] = [
-    { id: 'Employment', code: 'EMP', color: '#9DB8FF' },
-    { id: 'Investment', code: 'INV', color: '#7A98E0' },
-    { id: 'Business', code: 'BIZ', color: '#5D7BC4' },
-    { id: 'Other', code: 'OTH', color: '#44609E' },
+    { id: 'Employment', code: 'EMP', color: 'var(--i1)' },
+    { id: 'Investment', code: 'INV', color: 'var(--i2)' },
+    { id: 'Business', code: 'BIZ', color: 'var(--i3)' },
+    { id: 'Other', code: 'OTH', color: 'var(--i4)' },
 ];
 
-const FALLBACK: Category = { id: 'Others', code: 'OTH', color: '#8C8C8C' };
+const FALLBACK: Category = { id: 'Others', code: 'OTH', color: 'var(--c-others)' };
 
 function finder(list: Category[]) {
     return (id: string): Category => list.find(c => c.id === id) ?? { ...FALLBACK, id };

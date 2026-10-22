@@ -1,7 +1,7 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.65);
+    background: var(--scrim);
     z-index: 50;
 }
 
@@ -126,7 +126,6 @@
     background: var(--bg);
     font-size: 0.75rem;
     outline: 0;
-    color-scheme: dark;
 }
 
 .lockedDate {

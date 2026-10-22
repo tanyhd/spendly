@@ -100,7 +100,7 @@
 
 .inputInvalid,
 .inputInvalid:focus {
-    border-color: #6B2030;
+    border-color: var(--err-bd);
 }
 
 .hint {
@@ -123,6 +123,25 @@
     color: var(--muted);
     font-size: 0.6875rem;
     letter-spacing: 0.08em;
+}
+
+.segments3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.segmentShort {
+    height: 44px;
+}
+
+.fieldHead {
+    display: flex;
+    justify-content: space-between;
+}
+
+.fieldNote {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--dim);
 }
 
 .segmentActive {
@@ -173,7 +192,7 @@
 
 .btnDone,
 .btnDone:hover {
-    background: #123A26;
+    background: var(--ok-bg);
     color: var(--pos);
 }
 
@@ -271,7 +290,7 @@
     align-items: stretch;
     flex-wrap: wrap;
     border: 1px solid var(--danger);
-    background: #1E0F12;
+    background: var(--err-bg);
 }
 
 .confirmText {
@@ -292,7 +311,7 @@
 }
 
 .confirmCancel {
-    border-left: 1px solid #4A1E26;
+    border-left: 1px solid var(--danger-line);
     background: transparent;
 }
 
@@ -313,8 +332,8 @@
     gap: 14px;
     margin: 20px;
     padding: 20px;
-    border: 1px solid #6B2030;
-    background: #140A0C;
+    border: 1px solid var(--err-bd);
+    background: var(--danger-bg);
 }
 
 .dangerTitle {
@@ -325,7 +344,7 @@
     font-family: var(--font-sans);
     font-size: 0.8125rem;
     line-height: 1.5;
-    color: #BDBDBD;
+    color: var(--soft);
 }
 
 .dangerDesc b {
@@ -350,8 +369,8 @@
 }
 
 .dangerSolid:disabled {
-    background: #2A1418;
-    color: #6B2030;
+    background: var(--neg-hover);
+    color: var(--err-bd);
     cursor: not-allowed;
 }
 
@@ -367,6 +386,10 @@
 
     .segments {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .segments3 {
+        grid-template-columns: repeat(3, 1fr);
     }
 
     .clearRow {

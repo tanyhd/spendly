@@ -23,12 +23,12 @@
 
 .undo {
     border: 0;
-    border-left: 1px solid #BDBDBD;
+    border-left: 1px solid var(--tip-line);
     background: transparent;
     padding: 0 16px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    color: #D9430A;
+    color: var(--tip-primary);
 }
 
 @media (max-width: 719px) {

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import cx from 'classnames';
 import { useAuth } from '@/context/AuthContext';
 import { fmt, fmtMonth, fmtWeekRange, getWeekStart, plural, toDateInt } from '@/lib/format';
+import { useTheme, type ThemePref } from '@/lib/theme';
 import styles from './Settings.module.css';
 
 const TABS = [
@@ -17,6 +18,12 @@ const PAGES = [
     { value: 'monthly-budget', label: 'MONTHLY BUDGET' },
     { value: 'daily-log', label: 'DAILY LOG' },
     { value: 'annual-overview', label: 'ANNUAL OVERVIEW' },
+];
+
+const THEMES: { value: ThemePref; label: string }[] = [
+    { value: 'dark', label: '◑ DARK' },
+    { value: 'light', label: '◐ LIGHT' },
+    { value: 'system', label: 'SYSTEM' },
 ];
 
 type Preview = { entries: number; total: number; budgets: number };
@@ -51,6 +58,7 @@ function Stepper({ label, onPrev, onNext }: { label: string; onPrev: () => void;
 export default function SettingsPage() {
     const now = new Date();
     const { refreshUser } = useAuth();
+    const { pref: themePref, setPref: setThemePref } = useTheme();
     const [activeTab, setActiveTab] = useState<TabId>('preferences');
     const [loading, setLoading] = useState(true);
 
@@ -240,6 +248,25 @@ export default function SettingsPage() {
                         <div className={styles.blockHead}>
                             <span className={styles.blockTitle}>PREFERENCES</span>
                             <span className={styles.blockDesc}>Personalise your Spendly experience.</span>
+                        </div>
+                        <div className={styles.field}>
+                            <span className={styles.fieldHead}>
+                                <span className="label">Appearance</span>
+                                <span className={styles.fieldNote}>APPLIES INSTANTLY</span>
+                            </span>
+                            <div className={cx(styles.segments, styles.segments3)} role="radiogroup" aria-label="Appearance">
+                                {THEMES.map(t => (
+                                    <button
+                                        key={t.value}
+                                        role="radio"
+                                        aria-checked={themePref === t.value}
+                                        className={cx(styles.segment, styles.segmentShort, themePref === t.value && styles.segmentActive)}
+                                        onClick={() => setThemePref(t.value)}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <label className={styles.field}>
                             <span className="label">Display name</span>
