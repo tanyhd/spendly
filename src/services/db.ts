@@ -25,7 +25,8 @@ export type EntryDoc = {
     updatedAt?: Date;
 };
 
-export type PlanRowDoc = { label: string; category: string; amount: StoredAmount; recurring?: boolean };
+/** `id` is stable across saves and copy-forward (older rows saved before ids existed have none) */
+export type PlanRowDoc = { id?: string; label: string; category: string; amount: StoredAmount };
 
 export type PlanDoc = {
     _id: ObjectId;
@@ -66,9 +67,11 @@ export async function connectToDb(): Promise<Db> {
         const client = new MongoClient(uri, { runtimeAdapters: { os } });
         cache.client = client;
         cache.promise = client.connect()
-            .then(() => {
+            .then(async () => {
                 console.log(`Connected to MongoDB at ${redact(uri)}, db: ${process.env.MONGODB_DBNAME}`);
-                return client.db(process.env.MONGODB_DBNAME);
+                const db = client.db(process.env.MONGODB_DBNAME);
+                await ensureIndexes(db);
+                return db;
             })
             .catch(err => {
                 cache.promise = null; // let the next request retry
@@ -76,6 +79,28 @@ export async function connectToDb(): Promise<Db> {
             });
     }
     return cache.promise;
+}
+
+/**
+ * Indexes every query relies on. createIndex is a no-op when the index already exists, so this
+ * runs once per server start. A failure is logged, not fatal: the app still works without them.
+ */
+export async function ensureIndexes(db: Db) {
+    try {
+        await Promise.all([
+            db.collection('users').createIndex({ email: 1 }, { unique: true, name: 'email_unique' }),
+            db.collection('daily_entries').createIndex({ userId: 1, date: -1, _id: -1 }, { name: 'user_date' }),
+            db.collection('monthly_plans').createIndex({ userId: 1, year: 1, month: 1 }, { unique: true, name: 'user_month_unique' }),
+            db.collection('user_settings').createIndex({ userId: 1 }, { unique: true, name: 'user_unique' }),
+        ]);
+    } catch (err) {
+        console.error('Could not create MongoDB indexes:', (err as Error).message);
+    }
+}
+
+/** MongoDB's duplicate-key error (a unique index refused the write) */
+export function isDuplicateKeyError(err: unknown) {
+    return typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000;
 }
 
 /** Closes the shared connection (used by tests so the process can exit) */

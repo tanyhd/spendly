@@ -126,3 +126,92 @@ describe('annual overview', () => {
         expect(months[0]).toEqual({ income: [], fixedExpenses: [], variable: [] });
     });
 });
+
+describe('budget save is locked down', () => {
+    let alex: TestUser;
+    beforeEach(async () => { alex = await makeUser('Alex'); });
+
+    const status = async (body: unknown) => (await save(alex, 2026, 10, body)).status;
+    const message = async (body: unknown) => (await (await save(alex, 2026, 10, body)).json()).message;
+
+    it('keeps only known fields: a request cannot write other fields like userId into the plan', async () => {
+        const sam = await makeUser('Sam');
+        await save(alex, 2026, 10, {
+            ...PLAN,
+            userId: sam.userId, year: 1999, isAdmin: true,
+            income: [{ label: 'Salary', category: 'Employment', amount: 5000, injected: '$where' }],
+        });
+        const stored = await db.raw().collection('monthly_plans').findOne({});
+        expect(stored?.userId.toString()).toBe(alex.userId);
+        expect(stored?.year).toBe(2026);
+        expect(stored).not.toHaveProperty('isAdmin');
+        expect(Object.keys(stored!.income[0]).sort()).toEqual(['amount', 'category', 'id', 'label']);
+    });
+
+    it.each([
+        [{ income: 'lots' }, 'Income must be a list'],
+        [{ income: [{ label: 'Salary', category: 'Housing', amount: 1 }] }, 'Income: unknown category "Housing"'],
+        [{ fixedExpenses: [{ label: 'Rent', category: 'Employment', amount: 1 }] }, 'Fixed expenses: unknown category "Employment"'],
+        [{ fixedExpenses: [{ label: 'Rent', category: 'Housing', amount: -5 }] }, 'Fixed expenses: amounts must be 0 or more'],
+        [{ fixedExpenses: [{ label: 'Rent', category: 'Housing', amount: 'abc' }] }, 'Fixed expenses: amounts must be 0 or more'],
+        [{ income: [{ label: 'x'.repeat(81), category: 'Employment', amount: 1 }] }, 'Income: labels can be at most 80 characters'],
+        [{ income: Array.from({ length: 101 }, () => ({ label: 'x', category: 'Employment', amount: 1 })) }, 'Income can have at most 100 rows'],
+    ])('refuses bad input (%#) and saves nothing', async (body, msg) => {
+        expect(await status(body)).toBe(400);
+        expect(await message(body)).toBe(msg);
+        expect(await db.raw().collection('monthly_plans').countDocuments()).toBe(0);
+    });
+
+    it('refuses a body that is not JSON', async () => {
+        const res = await saveBudget(new (await import('next/server')).NextRequest('http://localhost/api/budget/2026/10', {
+            method: 'PUT', headers: { cookie: `token=${alex.token}` }, body: 'not json',
+        }), ctx({ year: '2026', month: '10' }));
+        expect(res.status).toBe(400);
+    });
+
+    it('trims labels, rounds amounts to cents and treats an empty amount as 0', async () => {
+        await save(alex, 2026, 10, { income: [{ label: '  Salary  ', category: 'Employment', amount: 1234.567 }, { label: 'Bonus', category: 'Employment', amount: '' }] });
+        const back = await load(alex, 2026, 10);
+        expect(back.income.map((r: { label: string; amount: number }) => [r.label, r.amount])).toEqual([['Salary', 1234.57], ['Bonus', 0]]);
+    });
+
+    it.each([['2026', '13'], ['2026', '0'], ['abcd', '10'], ['1850', '1']])('refuses an invalid month %s/%s', async (year, month) => {
+        expect((await getBudget(req(`/api/budget/${year}/${month}`, { user: alex }), ctx({ year, month }))).status).toBe(400);
+        expect((await saveBudget(req(`/api/budget/${year}/${month}`, { method: 'PUT', user: alex, body: PLAN }), ctx({ year, month }))).status).toBe(400);
+    });
+});
+
+describe('budget row ids', () => {
+    let alex: TestUser;
+    beforeEach(async () => { alex = await makeUser('Alex'); });
+
+    it('keeps the ids the page sends, and gives rows without one an id', async () => {
+        await save(alex, 2026, 10, { fixedExpenses: [{ id: 'rent1', label: 'Rent', category: 'Housing', amount: 2200 }, { label: 'Taxes', category: 'Tax', amount: 400 }] });
+        const rows = (await load(alex, 2026, 10)).fixedExpenses;
+        expect(rows[0].id).toBe('rent1');
+        expect(rows[1].id).toMatch(/^[A-Za-z0-9_-]{1,40}$/);
+    });
+
+    it('ids stay the same across saves and when a month is copied forward', async () => {
+        await save(alex, 2026, 10, { fixedExpenses: [{ label: 'Rent', category: 'Housing', amount: 2200 }] });
+        const id = (await load(alex, 2026, 10)).fixedExpenses[0].id;
+
+        const oct = await load(alex, 2026, 10);
+        await save(alex, 2026, 10, oct);
+        expect((await load(alex, 2026, 10)).fixedExpenses[0].id).toBe(id);
+        expect((await load(alex, 2026, 11)).fixedExpenses[0].id).toBe(id); // copy of October
+    });
+
+    it('refuses ids with odd characters and replaces them', async () => {
+        await save(alex, 2026, 10, { fixedExpenses: [{ id: '{"$gt":""}', label: 'Rent', category: 'Housing', amount: 1 }] });
+        expect((await load(alex, 2026, 10)).fixedExpenses[0].id).not.toContain('$');
+    });
+
+    it('rows saved before ids existed get one when read', async () => {
+        await db.raw().collection('monthly_plans').insertOne({
+            userId: new (await import('mongodb')).ObjectId(alex.userId), year: 2026, month: 10,
+            income: [{ label: 'Salary', category: 'Employment', amount: 5000 }], fixedExpenses: [],
+        });
+        expect((await load(alex, 2026, 10)).income[0].id).toBeTruthy();
+    });
+});

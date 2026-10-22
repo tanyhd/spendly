@@ -87,3 +87,22 @@ describe('POST /api/auth/logout', () => {
         expect(res.headers.get('set-cookie')).toMatch(/token=;.*Max-Age=0/i);
     });
 });
+
+describe('one account per email', () => {
+    it('two sign-ups with the same email at the same moment: one succeeds, the other is told the email is in use', async () => {
+        const [a, b] = await Promise.all([
+            register(req('/api/auth/register', { method: 'POST', body: NEW_USER })),
+            register(req('/api/auth/register', { method: 'POST', body: NEW_USER })),
+        ]);
+        expect([a.status, b.status].sort()).toEqual([200, 409]);
+        expect(await db.raw().collection('users').countDocuments({ email: NEW_USER.email })).toBe(1);
+    });
+
+    it('the indexes queries rely on exist', async () => {
+        const names = async (c: string) => (await db.raw().collection(c).indexes()).map(i => i.name);
+        expect(await names('users')).toContain('email_unique');
+        expect(await names('daily_entries')).toContain('user_date');
+        expect(await names('monthly_plans')).toContain('user_month_unique');
+        expect(await names('user_settings')).toContain('user_unique');
+    });
+});

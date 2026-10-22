@@ -45,7 +45,7 @@ function makeExpenseDefaults(): Row[] {
 }
 
 function toRows(list: BudgetRow[]): Row[] {
-    return list.map(r => ({ id: uid(), label: r.label ?? '', category: r.category, amount: (Number(r.amount) || 0).toFixed(2) }));
+    return list.map(r => ({ id: r.id || uid(), label: r.label ?? '', category: r.category, amount: (Number(r.amount) || 0).toFixed(2) }));
 }
 
 const sum = (rows: Row[]) => rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
@@ -173,7 +173,8 @@ export default function MonthlyBudgetPage() {
     async function handleSave() {
         if (saving === 'saving') return;
         setSaving('saving');
-        const strip = (rows: Row[]) => rows.map(r => ({ label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 }));
+        // Row ids are kept so the server can track a row across saves (bills need this)
+        const strip = (rows: Row[]) => rows.map(r => ({ id: r.id, label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 }));
         try {
             const res = await fetch(`/api/budget/${year}/${month}`, {
                 method: 'PUT',

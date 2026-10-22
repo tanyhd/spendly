@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
-import { encryptAmount } from '@/lib/crypto';
-import { getBudgetForMonth, upsertBudget } from '@/services/budgets';
+import { parseYearMonth } from '@/lib/period';
+import { getBudgetForMonth, upsertBudget, parsePlanInput } from '@/services/budgets';
 
 async function getAuth(request: NextRequest) {
     const token = request.cookies.get('token')?.value;
@@ -16,8 +16,10 @@ export async function GET(
     const auth = await getAuth(request);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { year: y, month: m } = await context.params;
-    const data = await getBudgetForMonth(auth.userId, parseInt(y), parseInt(m));
+    const ym = parseYearMonth(await context.params);
+    if (!ym) return NextResponse.json({ message: 'Invalid month' }, { status: 400 });
+
+    const data = await getBudgetForMonth(auth.userId, ym.year, ym.month);
     return NextResponse.json(data ?? null);
 }
 
@@ -28,21 +30,13 @@ export async function PUT(
     const auth = await getAuth(request);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { year: y, month: m } = await context.params;
-    const year = parseInt(y);
-    const month = parseInt(m);
-    const body = await request.json();
+    const ym = parseYearMonth(await context.params);
+    if (!ym) return NextResponse.json({ message: 'Invalid month' }, { status: 400 });
 
-    const encrypted = {
-        ...body,
-        ...(Array.isArray(body.income) && {
-            income: body.income.map((item: { amount?: unknown }) => ({ ...item, amount: encryptAmount(parseFloat(String(item.amount)) || 0) })),
-        }),
-        ...(Array.isArray(body.fixedExpenses) && {
-            fixedExpenses: body.fixedExpenses.map((item: { amount?: unknown }) => ({ ...item, amount: encryptAmount(parseFloat(String(item.amount)) || 0) })),
-        }),
-    };
+    const body = await request.json().catch(() => null);
+    const parsed = parsePlanInput(body);
+    if (!parsed.ok) return NextResponse.json({ message: parsed.error }, { status: 400 });
 
-    await upsertBudget(auth.userId, year, month, encrypted);
+    await upsertBudget(auth.userId, ym.year, ym.month, parsed.data);
     return NextResponse.json({ success: true });
 }

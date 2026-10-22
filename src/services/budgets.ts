@@ -1,8 +1,10 @@
 // Monthly plans (the Budget page): planned income and fixed expenses per month.
-import { decryptAmount } from '@/lib/crypto';
+import { randomUUID } from 'crypto';
+import { decryptAmount, encryptAmount } from '@/lib/crypto';
+import { INCOME_CATEGORIES, FIXED_CATEGORIES } from '@/common/constants/categories';
 import { collections, toObjectId, type PlanDoc, type PlanRowDoc } from './db';
 
-export type BudgetRow = { label: string; amount: number; category: string; recurring?: boolean };
+export type BudgetRow = { id: string; label: string; amount: number; category: string };
 
 export type BudgetData = {
     income: BudgetRow[];
@@ -15,8 +17,64 @@ export type BudgetData = {
 /** Fields a saved plan holds; amounts already encrypted */
 export type PlanFields = Pick<PlanDoc, 'income' | 'fixedExpenses'>;
 
+/** Rows as the API returns them: decrypted, and every row has an id (older rows get one on read) */
 export function decryptRows(rows: PlanRowDoc[] | undefined): BudgetRow[] {
-    return Array.isArray(rows) ? rows.map(r => ({ ...r, amount: decryptAmount(r.amount) })) : [];
+    return Array.isArray(rows)
+        ? rows.map(r => ({ id: r.id ?? newRowId(), label: r.label, category: r.category, amount: decryptAmount(r.amount) }))
+        : [];
+}
+
+export function newRowId() {
+    return randomUUID().slice(0, 8);
+}
+
+const ROW_ID = /^[A-Za-z0-9_-]{1,40}$/;
+const MAX_LABEL = 80;
+const MAX_ROWS = 100;
+
+export type PlanInputResult = { ok: true; data: PlanFields } | { ok: false; error: string };
+
+/**
+ * Validates a Budget page save and keeps only known fields, so a request can't write
+ * anything else into the plan (like another userId). Amounts come back encrypted.
+ */
+export function parsePlanInput(body: unknown): PlanInputResult {
+    if (!body || typeof body !== 'object') return { ok: false, error: 'Invalid budget' };
+    const input = body as Record<string, unknown>;
+
+    const sections = [
+        { key: 'income', label: 'Income', categories: INCOME_CATEGORIES.map(c => c.id) },
+        { key: 'fixedExpenses', label: 'Fixed expenses', categories: FIXED_CATEGORIES.map(c => c.id) },
+    ] as const;
+
+    const data: PlanFields = {};
+    for (const { key, label, categories } of sections) {
+        const rows = input[key];
+        if (rows === undefined) continue;
+        if (!Array.isArray(rows)) return { ok: false, error: `${label} must be a list` };
+        if (rows.length > MAX_ROWS) return { ok: false, error: `${label} can have at most ${MAX_ROWS} rows` };
+
+        const clean: PlanRowDoc[] = [];
+        for (const raw of rows) {
+            const r = (raw ?? {}) as Record<string, unknown>;
+            const name = typeof r.label === 'string' ? r.label.trim() : '';
+            const category = typeof r.category === 'string' ? r.category : '';
+            const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount ?? ''));
+            if (name.length > MAX_LABEL) return { ok: false, error: `${label}: labels can be at most ${MAX_LABEL} characters` };
+            if (!(categories as readonly string[]).includes(category)) return { ok: false, error: `${label}: unknown category "${category}"` };
+            if (r.amount !== undefined && r.amount !== '' && (!Number.isFinite(amount) || amount < 0)) {
+                return { ok: false, error: `${label}: amounts must be 0 or more` };
+            }
+            clean.push({
+                id: typeof r.id === 'string' && ROW_ID.test(r.id) ? r.id : newRowId(),
+                label: name,
+                category,
+                amount: encryptAmount(Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0),
+            });
+        }
+        data[key] = clean;
+    }
+    return { ok: true, data };
 }
 
 export async function getBudget(userId: string, year: number, month: number): Promise<PlanDoc | null> {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findUserByEmail, createUser } from '@/services/users';
-import { createObjectId } from '@/services/db';
+import { createObjectId, isDuplicateKeyError } from '@/services/db';
 import { signToken } from '@/lib/jwt';
 import bcrypt from 'bcrypt';
 
@@ -28,8 +28,16 @@ export async function POST(req: Request) {
         // Sign token before insert — if this fails, nothing is written to DB
         const token = await signToken({ userId, email, name });
 
-        // Insert only after token is ready — if this fails, token was never sent
-        await createUser(id, email, name, hashedPassword);
+        // Insert only after token is ready — if this fails, token was never sent.
+        // The unique email index catches two sign-ups racing past the check above.
+        try {
+            await createUser(id, email, name, hashedPassword);
+        } catch (err) {
+            if (isDuplicateKeyError(err)) {
+                return NextResponse.json({ message: 'Email already in use' }, { status: 409 });
+            }
+            throw err;
+        }
 
         const res = NextResponse.json({ name, email });
         res.cookies.set('token', token, {
