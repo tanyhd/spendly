@@ -1,6 +1,8 @@
 // Read-only views that combine plans and entries: dashboard, annual overview, month totals.
 import { decryptAmount } from '@/lib/crypto';
-import { getBudget, decryptRows } from './budgets';
+import { todayInt } from '@/lib/format';
+import { budgetProgress, suggestLimits, type BudgetProgress, type CategoryLimit } from '@/lib/budgetProgress';
+import { getBudget, decryptRows, decryptLimits } from './budgets';
 import { getMonthEntries, getRecentTransactions, toEntry, type Entry } from './entries';
 
 export type CategoryTotal = { category: string; total: number };
@@ -17,6 +19,8 @@ export type DashboardData = {
     fixedByCategory: CategoryTotal[];
     variableByCategory: CategoryTotal[];
     dailyTotals: DailyTotal[];
+    /** Category limits vs this month's daily spending; null when the saved plan has no limits */
+    budgets: BudgetProgress | null;
 };
 
 export type MonthIncomeRow = { label: string; amount: number };
@@ -43,7 +47,7 @@ export async function getMonthVariableTotals(userId: string, year: number, month
 }
 
 /** Everything the dashboard shows for a month. Only a saved plan counts (a copy of last month doesn't). */
-export async function getDashboardData(userId: string, year: number, month: number): Promise<DashboardData> {
+export async function getDashboardData(userId: string, year: number, month: number, today = todayInt()): Promise<DashboardData> {
     const [plan, allEntries, recent] = await Promise.all([
         getBudget(userId, year, month),
         getMonthEntries(userId, year, month),
@@ -52,6 +56,7 @@ export async function getDashboardData(userId: string, year: number, month: numb
 
     const income = decryptRows(plan?.income);
     const fixedExpenses = decryptRows(plan?.fixedExpenses);
+    const limits = decryptLimits(plan?.categoryBudgets).map(l => ({ category: l.category, amount: l.amount }));
     const totalIncome = income.reduce((s, r) => s + r.amount, 0);
 
     const catTotals: Record<string, number> = {};
@@ -86,7 +91,22 @@ export async function getDashboardData(userId: string, year: number, month: numb
         fixedByCategory: sortedTotals(fixedTotals),
         variableByCategory: sortedTotals(variableTotals),
         dailyTotals,
+        budgets: limits.length > 0 ? budgetProgress(limits, variableTotals, year, month, today) : null,
     };
+}
+
+/** Suggested limits for a month: average daily-category spending over the 3 months before it */
+export async function getSuggestedLimits(userId: string, year: number, month: number): Promise<CategoryLimit[]> {
+    const months = Array.from({ length: 3 }, (_, i) => {
+        const d = new Date(year, month - 2 - i, 1);
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+    const totals = await Promise.all(months.map(async m => {
+        const t: Record<string, number> = {};
+        for (const e of await getMonthEntries(userId, m.year, m.month)) add(t, e.category, decryptAmount(e.amount));
+        return t;
+    }));
+    return suggestLimits(totals);
 }
 
 /** All 12 months of a year: saved income and fixed rows, and daily-log totals by category */

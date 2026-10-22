@@ -35,8 +35,12 @@ export type PlanDoc = {
     month: number;
     income?: PlanRowDoc[];
     fixedExpenses?: PlanRowDoc[];
+    /** Monthly spending limits for daily categories */
+    categoryBudgets?: CategoryBudgetDoc[];
     updatedAt?: Date;
 };
+
+export type CategoryBudgetDoc = { id?: string; category: string; amount: StoredAmount };
 
 export type SettingsDoc = {
     _id: ObjectId;

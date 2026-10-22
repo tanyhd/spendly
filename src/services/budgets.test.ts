@@ -18,7 +18,7 @@ describe('getBudgetForMonth', () => {
         const { userId } = await makeUser();
         await upsertBudget(userId, 2026, 9, { income: [row('Salary', 'Employment', 5000)], fixedExpenses: [] });
         await upsertBudget(userId, 2026, 10, { income: [], fixedExpenses: [] });
-        expect(await getBudgetForMonth(userId, 2026, 10)).toEqual({ income: [], fixedExpenses: [], source: 'saved' });
+        expect(await getBudgetForMonth(userId, 2026, 10)).toEqual({ income: [], fixedExpenses: [], categoryBudgets: [], source: 'saved' });
     });
 
     it('decrypts amounts in both saved and copied plans', async () => {

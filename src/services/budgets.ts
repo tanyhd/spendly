@@ -1,26 +1,36 @@
-// Monthly plans (the Budget page): planned income and fixed expenses per month.
+// Monthly plans (the Budget page): planned income, fixed expenses and category limits per month.
 import { randomUUID } from 'crypto';
 import { decryptAmount, encryptAmount } from '@/lib/crypto';
-import { INCOME_CATEGORIES, FIXED_CATEGORIES } from '@/common/constants/categories';
-import { collections, toObjectId, type PlanDoc, type PlanRowDoc } from './db';
+import { INCOME_CATEGORIES, FIXED_CATEGORIES, DAILY_CATEGORIES } from '@/common/constants/categories';
+import { collections, toObjectId, type PlanDoc, type PlanRowDoc, type CategoryBudgetDoc } from './db';
 
 export type BudgetRow = { id: string; label: string; amount: number; category: string };
+
+/** A monthly spending limit for one daily category */
+export type CategoryBudget = { id: string; category: string; amount: number };
 
 export type BudgetData = {
     income: BudgetRow[];
     fixedExpenses: BudgetRow[];
+    categoryBudgets: CategoryBudget[];
     /** 'saved' = this month's own plan; 'copied' = last month's rows offered as a starting point */
     source: 'saved' | 'copied';
     copiedFrom?: { year: number; month: number };
 } | null;
 
 /** Fields a saved plan holds; amounts already encrypted */
-export type PlanFields = Pick<PlanDoc, 'income' | 'fixedExpenses'>;
+export type PlanFields = Pick<PlanDoc, 'income' | 'fixedExpenses' | 'categoryBudgets'>;
 
 /** Rows as the API returns them: decrypted, and every row has an id (older rows get one on read) */
 export function decryptRows(rows: PlanRowDoc[] | undefined): BudgetRow[] {
     return Array.isArray(rows)
         ? rows.map(r => ({ id: r.id ?? newRowId(), label: r.label, category: r.category, amount: decryptAmount(r.amount) }))
+        : [];
+}
+
+export function decryptLimits(rows: CategoryBudgetDoc[] | undefined): CategoryBudget[] {
+    return Array.isArray(rows)
+        ? rows.map(r => ({ id: r.id ?? newRowId(), category: r.category, amount: decryptAmount(r.amount) }))
         : [];
 }
 
@@ -74,6 +84,31 @@ export function parsePlanInput(body: unknown): PlanInputResult {
         }
         data[key] = clean;
     }
+
+    // Category limits: daily categories only, one limit each
+    if (input.categoryBudgets !== undefined) {
+        const rows = input.categoryBudgets;
+        if (!Array.isArray(rows)) return { ok: false, error: 'Category budgets must be a list' };
+        const allowed = DAILY_CATEGORIES.map(c => c.id);
+        const seen = new Set<string>();
+        const clean: CategoryBudgetDoc[] = [];
+        for (const raw of rows) {
+            const r = (raw ?? {}) as Record<string, unknown>;
+            const category = typeof r.category === 'string' ? r.category : '';
+            const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount ?? ''));
+            if (!allowed.includes(category)) return { ok: false, error: `Category budgets: unknown category "${category}"` };
+            if (seen.has(category)) return { ok: false, error: `Category budgets: ${category} has more than one limit` };
+            if (!Number.isFinite(amount) || amount < 0) return { ok: false, error: 'Category budgets: limits must be 0 or more' };
+            seen.add(category);
+            clean.push({
+                id: typeof r.id === 'string' && ROW_ID.test(r.id) ? r.id : newRowId(),
+                category,
+                amount: encryptAmount(Math.round(amount * 100) / 100),
+            });
+        }
+        data.categoryBudgets = clean;
+    }
+
     return { ok: true, data };
 }
 
@@ -105,7 +140,12 @@ export async function countBudgets(userId: string, year?: number, month?: number
 export async function getBudgetForMonth(userId: string, year: number, month: number): Promise<BudgetData> {
     const budget = await getBudget(userId, year, month);
     if (budget) {
-        return { income: decryptRows(budget.income), fixedExpenses: decryptRows(budget.fixedExpenses), source: 'saved' };
+        return {
+            income: decryptRows(budget.income),
+            fixedExpenses: decryptRows(budget.fixedExpenses),
+            categoryBudgets: decryptLimits(budget.categoryBudgets),
+            source: 'saved',
+        };
     }
 
     const prevMonth = month === 1 ? 12 : month - 1;
@@ -115,7 +155,8 @@ export async function getBudgetForMonth(userId: string, year: number, month: num
 
     const income = decryptRows(prev.income);
     const fixedExpenses = decryptRows(prev.fixedExpenses);
-    if (income.length === 0 && fixedExpenses.length === 0) return null;
+    const categoryBudgets = decryptLimits(prev.categoryBudgets);
+    if (income.length === 0 && fixedExpenses.length === 0 && categoryBudgets.length === 0) return null;
 
-    return { income, fixedExpenses, source: 'copied', copiedFrom: { year: prevYear, month: prevMonth } };
+    return { income, fixedExpenses, categoryBudgets, source: 'copied', copiedFrom: { year: prevYear, month: prevMonth } };
 }
