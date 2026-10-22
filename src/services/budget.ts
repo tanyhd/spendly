@@ -3,7 +3,13 @@ import { decryptAmount } from '@/lib/crypto';
 
 export type CategoryTotal = { category: string; total: number };
 export type BudgetRow = { label: string; amount: number; category: string; recurring?: boolean };
-export type BudgetData = { income: BudgetRow[]; fixedExpenses: BudgetRow[] } | null;
+export type BudgetData = {
+    income: BudgetRow[];
+    fixedExpenses: BudgetRow[];
+    /** 'saved' = this month's own plan; 'copied' = last month's rows offered as a starting point */
+    source: 'saved' | 'copied';
+    copiedFrom?: { year: number; month: number };
+} | null;
 
 export type MonthIncomeRow = { label: string; amount: number };
 export type MonthFixedRow = { label: string; amount: number };
@@ -131,6 +137,7 @@ export async function getBudgetForMonth(
             fixedExpenses: Array.isArray(budget.fixedExpenses)
                 ? budget.fixedExpenses.map((r: any) => ({ ...r, amount: decryptAmount(r.amount) }))
                 : [],
+            source: 'saved',
         };
     }
 
@@ -150,7 +157,7 @@ export async function getBudgetForMonth(
 
     if (income.length === 0 && fixedExpenses.length === 0) return null;
 
-    return { income, fixedExpenses };
+    return { income, fixedExpenses, source: 'copied', copiedFrom: { year: prevYear, month: prevMonth } };
 }
 
 export async function getAnnualData(userId: string, year: number): Promise<AnnualData> {

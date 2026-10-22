@@ -71,6 +71,19 @@ describe('getBudgetForMonth', () => {
         const result = await getBudgetForMonth('u1', 2026, 5);
         expect(result?.income[0].amount).toBe(5000);
         expect(result?.fixedExpenses[0].amount).toBe(1500);
+        expect(result?.source).toBe('saved');
+    });
+
+    it('marks a carried-forward budget as copied and names the source month', async () => {
+        mockGetBudget
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce({
+                income: [{ label: 'Salary', amount: 5000, category: 'Employment' }],
+                fixedExpenses: [],
+            });
+        const result = await getBudgetForMonth('u1', 2026, 1);
+        expect(result?.source).toBe('copied');
+        expect(result?.copiedFrom).toEqual({ year: 2025, month: 12 });
     });
 
     it('returns null when no budget exists for the month or the previous month', async () => {

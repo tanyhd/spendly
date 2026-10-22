@@ -1,380 +1,329 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import cx from 'classnames';
+import {
+    INCOME_CATEGORIES, FIXED_CATEGORIES, dailyCategory, incomeCategory, fixedCategory, type Category,
+} from '@/common/constants/categories';
+import { useExpense } from '@/context/ExpenseContext';
+import { useToast } from '@/context/ToastContext';
+import CategoryTag from '@/common/components/CategoryTag';
+import SegmentBar from '@/common/components/SegmentBar';
+import { fmt, fmtSigned, fmtMonth } from '@/lib/format';
 import styles from './MonthlyBudget.module.css';
-import Payments from '@/common/icons/Payments';
-import Bank from '@/common/icons/Bank';
-import DailyLog from '@/common/icons/DailyLog';
-import Trash from '@/common/icons/Trash';
-import OthersGrid from '@/common/icons/OthersGrid';
-import { CATEGORY_COLORS, CATEGORY_ICONS } from '@/common/constants/categories';
-import MonthPicker from '@/common/components/MonthPicker';
 
-const INCOME_CATEGORIES = ['Employment', 'Investment', 'Business', 'Other'] as const;
-const EXPENSE_CATEGORIES = ['Housing', 'Tax', 'Insurance', 'Education', 'Family', 'Other'] as const;
-
-type IncomeRow = { id: string; label: string; amount: string; category: string };
-type FixedRow = { id: string; label: string; amount: string; category: string };
+type Row = { id: string; label: string; amount: string; category: string };
 type VarEntry = { category: string; total: number };
-
-function makeIncomeDefaults(): IncomeRow[] {
-    return [
-        { id: uid(), label: 'Salary', amount: '', category: 'Employment' },
-        { id: uid(), label: 'Commissions', amount: '', category: 'Employment' },
-        { id: uid(), label: 'Bonuses', amount: '', category: 'Employment' },
-        { id: uid(), label: 'Dividends', amount: '', category: 'Investment' },
-        { id: uid(), label: 'Rental Income', amount: '', category: 'Investment' },
-        { id: uid(), label: 'Interest Income', amount: '', category: 'Investment' },
-        { id: uid(), label: 'Misc', amount: '', category: 'Other' },
-    ];
-}
-
-function makeExpenseDefaults(): FixedRow[] {
-    return [
-        { id: uid(), label: 'Utilities & Bills', amount: '', category: 'Housing' },
-        { id: uid(), label: 'Taxes', amount: '', category: 'Tax' },
-        { id: uid(), label: 'Insurance', amount: '', category: 'Insurance' },
-        { id: uid(), label: 'School', amount: '', category: 'Education' },
-        { id: uid(), label: 'Family', amount: '', category: 'Family' },
-        { id: uid(), label: 'Misc', amount: '', category: 'Other' },
-    ];
-}
+type Section = 'income' | 'fixed';
+type Source = { kind: 'saved' } | { kind: 'copied'; year: number; month: number } | { kind: 'template' };
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
-function blockInvalidNumericKeys(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+function makeIncomeDefaults(): Row[] {
+    return [
+        { id: uid(), label: 'Salary', amount: '0.00', category: 'Employment' },
+        { id: uid(), label: 'Commissions', amount: '0.00', category: 'Employment' },
+        { id: uid(), label: 'Bonuses', amount: '0.00', category: 'Employment' },
+        { id: uid(), label: 'Dividends', amount: '0.00', category: 'Investment' },
+        { id: uid(), label: 'Rental Income', amount: '0.00', category: 'Investment' },
+        { id: uid(), label: 'Interest Income', amount: '0.00', category: 'Investment' },
+        { id: uid(), label: 'Misc', amount: '0.00', category: 'Other' },
+    ];
 }
 
-function fmt(n: number) {
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function makeExpenseDefaults(): Row[] {
+    return [
+        { id: uid(), label: 'Utilities & Bills', amount: '0.00', category: 'Housing' },
+        { id: uid(), label: 'Taxes', amount: '0.00', category: 'Tax' },
+        { id: uid(), label: 'Insurance', amount: '0.00', category: 'Insurance' },
+        { id: uid(), label: 'School', amount: '0.00', category: 'Education' },
+        { id: uid(), label: 'Family', amount: '0.00', category: 'Family' },
+        { id: uid(), label: 'Misc', amount: '0.00', category: 'Other' },
+    ];
 }
+
+function toRows(list: any[]): Row[] {
+    return list.map(r => ({ id: uid(), label: r.label ?? '', category: r.category, amount: (Number(r.amount) || 0).toFixed(2) }));
+}
+
+const sum = (rows: Row[]) => rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
 
 export default function MonthlyBudgetPage() {
     const now = new Date();
+    const { version } = useExpense();
+    const toast = useToast();
     const [year, setYear] = useState(now.getFullYear());
     const [month, setMonth] = useState(now.getMonth() + 1);
-    const [income, setIncome] = useState<IncomeRow[]>(makeIncomeDefaults());
-    const [fixed, setFixed] = useState<FixedRow[]>(makeExpenseDefaults());
-    const [loading, setLoading] = useState(true);
-    const [variableExpenses, setVariableExpenses] = useState<VarEntry[]>([]);
-    const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
-    const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
+    const [income, setIncome] = useState<Row[]>([]);
+    const [fixed, setFixed] = useState<Row[]>([]);
+    const [source, setSource] = useState<Source>({ kind: 'template' });
+    const [variable, setVariable] = useState<VarEntry[]>([]);
+    const [loadedKey, setLoadedKey] = useState('');
+    const [dirty, setDirty] = useState(false);
+    const [saving, setSaving] = useState<'idle' | 'saving' | 'saved'>('idle');
+    const [openDrop, setOpenDrop] = useState<string | null>(null);
+    const [pending, setPending] = useState<{ year: number; month: number } | null>(null);
+    const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const key = `${year}-${month}`;
+    const loading = loadedKey !== key;
 
     useEffect(() => {
-        if (!openCategoryId) return;
-        function handleClick(e: MouseEvent) {
-            if (!(e.target as Element).closest('[data-cat-drop]')) {
-                setOpenCategoryId(null);
-            }
-        }
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [openCategoryId]);
-
-    useEffect(() => {
-        setLoading(true);
-        setSaved(false);
+        let cancelled = false;
         Promise.all([
             fetch(`/api/budget/${year}/${month}`).then(r => r.ok ? r.json() : null),
             fetch(`/api/daily-log/month/${year}/${month}`).then(r => r.ok ? r.json() : []),
         ]).then(([data, varData]) => {
-            if (data) {
-                if (Array.isArray(data.income) && data.income.length > 0) {
-                    setIncome(data.income.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
-                } else {
-                    setIncome(makeIncomeDefaults());
-                }
-                if (Array.isArray(data.fixedExpenses) && data.fixedExpenses.length > 0) {
-                    setFixed(data.fixedExpenses.map((r: any) => ({ ...r, id: uid(), amount: r.amount != null ? String(r.amount) : '' })));
-                } else {
-                    setFixed(makeExpenseDefaults());
-                }
+            if (cancelled) return;
+            const hasRows = data && ((data.income?.length ?? 0) + (data.fixedExpenses?.length ?? 0)) > 0;
+            if (hasRows) {
+                setIncome(data.income?.length ? toRows(data.income) : makeIncomeDefaults());
+                setFixed(data.fixedExpenses?.length ? toRows(data.fixedExpenses) : makeExpenseDefaults());
+                setSource(data.source === 'copied' && data.copiedFrom
+                    ? { kind: 'copied', year: data.copiedFrom.year, month: data.copiedFrom.month }
+                    : { kind: 'saved' });
             } else {
                 setIncome(makeIncomeDefaults());
                 setFixed(makeExpenseDefaults());
+                setSource(data ? { kind: 'saved' } : { kind: 'template' });
             }
-            setVariableExpenses(Array.isArray(varData) ? varData : []);
-        }).finally(() => setLoading(false));
+            setVariable(Array.isArray(varData) ? varData : []);
+            setDirty(false);
+            setSaving('idle');
+            setOpenDrop(null);
+            setLoadedKey(`${year}-${month}`);
+        });
+        return () => { cancelled = true; };
     }, [year, month]);
 
-    function prevMonth() {
-        if (month === 1) { setYear(y => y - 1); setMonth(12); }
-        else setMonth(m => m - 1);
+    // An expense added from the shell only changes the read-only variable list,
+    // so refresh just that and keep any unsaved row edits
+    const monthRef = useRef({ year, month });
+    monthRef.current = { year, month };
+    useEffect(() => {
+        if (version === 0) return;
+        const { year: y, month: m } = monthRef.current;
+        fetch(`/api/daily-log/month/${y}/${m}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(v => Array.isArray(v) && setVariable(v));
+    }, [version]);
+
+    useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
+
+    function goTo(y: number, m: number) {
+        setYear(y);
+        setMonth(m);
+        setPending(null);
     }
 
-    function nextMonth() {
-        if (month === 12) { setYear(y => y + 1); setMonth(1); }
-        else setMonth(m => m + 1);
+    function step(delta: number) {
+        const d = new Date(year, month - 1 + delta, 1);
+        const target = { year: d.getFullYear(), month: d.getMonth() + 1 };
+        if (dirty) setPending(target);
+        else goTo(target.year, target.month);
     }
 
-    function addIncomeRow() {
-        setIncome(prev => [...prev, { id: uid(), label: '', amount: '', category: 'Other' }]);
-    }
-    function updateIncome(id: string, patch: Partial<IncomeRow>) {
-        setIncome(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
-    }
-    function deleteIncomeRow(id: string) {
-        setIncome(prev => prev.filter(r => r.id !== id));
+    function setter(sec: Section) {
+        return sec === 'income' ? setIncome : setFixed;
     }
 
-    function addFixedRow() {
-        setFixed(prev => [...prev, { id: uid(), label: '', amount: '', category: 'Other' }]);
-    }
-    function updateFixed(id: string, patch: Partial<FixedRow>) {
-        setFixed(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
-    }
-    function deleteFixedRow(id: string) {
-        setFixed(prev => prev.filter(r => r.id !== id));
+    function edit(sec: Section, id: string, patch: Partial<Row>) {
+        setter(sec)(rows => rows.map(r => r.id === id ? { ...r, ...patch } : r));
+        setDirty(true);
+        setSaving('idle');
     }
 
-    const totalIncome = income.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const totalFixed = fixed.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const totalVariable = variableExpenses.reduce((s, r) => s + r.total, 0);
-    const totalExpenses = totalFixed + totalVariable;
-    const netSavings = totalIncome - totalExpenses;
-    const savingsPercent = totalIncome > 0
-        ? Math.max(0, Math.min(100, Math.round((netSavings / totalIncome) * 100)))
-        : 0;
+    function addRow(sec: Section) {
+        setter(sec)(rows => [...rows, { id: uid(), label: '', amount: '0.00', category: sec === 'income' ? 'Employment' : 'Housing' }]);
+        setDirty(true);
+    }
+
+    function removeRow(sec: Section, id: string) {
+        setter(sec)(rows => rows.filter(r => r.id !== id));
+        setDirty(true);
+    }
 
     async function handleSave() {
-        setSaving(true);
+        if (saving === 'saving') return;
+        setSaving('saving');
+        const strip = (rows: Row[]) => rows.map(r => ({ label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 }));
         try {
             const res = await fetch(`/api/budget/${year}/${month}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    income: income.map(({ id: _id, ...r }) => ({ ...r, amount: parseFloat(r.amount) || 0 })),
-                    fixedExpenses: fixed.map(({ id: _id, ...r }) => ({ label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 })),
-                }),
+                body: JSON.stringify({ income: strip(income), fixedExpenses: strip(fixed) }),
             });
-            if (res.ok) {
-                setSaved(true);
-                setTimeout(() => setSaved(false), 3000);
-            }
-        } finally {
-            setSaving(false);
+            if (!res.ok) throw new Error();
+            setDirty(false);
+            setSource({ kind: 'saved' });
+            setSaving('saved');
+            if (savedTimer.current) clearTimeout(savedTimer.current);
+            savedTimer.current = setTimeout(() => setSaving('idle'), 3000);
+        } catch {
+            setSaving('idle');
+            toast('COULD NOT SAVE · TRY AGAIN');
         }
     }
 
-    function renderCategoryPill(rowId: string, current: string, options: readonly string[], onSelect: (c: string) => void) {
+    const totalIncome = sum(income);
+    const totalFixed = sum(fixed);
+    const totalVariable = variable.reduce((s, v) => s + v.total, 0);
+    const totalExpenses = totalFixed + totalVariable;
+    const net = totalIncome - totalExpenses;
+    const rate = totalIncome > 0 ? Math.max(0, Math.min(100, Math.round((net / totalIncome) * 100))) : null;
+    const label = fmtMonth(year, month);
+
+    const status = source.kind === 'saved'
+        ? { text: 'SAVED MONTH', color: 'var(--pos)' }
+        : source.kind === 'copied'
+            ? { text: `COPIED FROM ${fmtMonth(source.year, source.month)} · NOT SAVED`, color: 'var(--primary)' }
+            : { text: 'STARTER TEMPLATE · NOT SAVED', color: 'var(--primary)' };
+
+    function renderSection(sec: Section, title: string, addLabel: string, rows: Row[], options: Category[], find: (id: string) => Category, total: number, color: string) {
         return (
-            <div className={styles.categoryWrap} data-cat-drop="true">
-                <button
-                    className={cx(styles.categoryPill, openCategoryId === rowId && styles.categoryPillOpen)}
-                    onClick={() => setOpenCategoryId(openCategoryId === rowId ? null : rowId)}
-                >
-                    {current}
-                </button>
-                {openCategoryId === rowId && (
-                    <div className={styles.categoryDropdown}>
-                        {options.map(c => (
-                            <button
-                                key={c}
-                                className={cx(styles.categoryOption, current === c && styles.categoryOptionActive)}
-                                onClick={() => { onSelect(c); setOpenCategoryId(null); }}
-                            >
-                                {c}
+            <section className={styles.section}>
+                <div className={styles.sectionHead}>
+                    <span className={styles.sectionTitle}>{title} <span className={styles.dimText}>· {rows.length} ROWS</span></span>
+                    <span className="num" style={{ color }}>{fmt(total)}</span>
+                </div>
+                {rows.map(r => {
+                    const c = find(r.category);
+                    const open = openDrop === r.id;
+                    return (
+                        <div key={r.id} className={styles.row}>
+                            <button className={cx(styles.pill, open && styles.pillOpen)} onClick={() => setOpenDrop(open ? null : r.id)}>
+                                <span className={styles.swatch} style={{ background: c.color }} />
+                                {c.code}
+                                <span className={styles.pillCaret} aria-hidden="true" />
                             </button>
-                        ))}
-                    </div>
-                )}
-            </div>
+                            <input
+                                className={styles.labelInput}
+                                placeholder="Label"
+                                value={r.label}
+                                onChange={e => edit(sec, r.id, { label: e.target.value })}
+                            />
+                            <span className={styles.amountCell}>
+                                $
+                                <input
+                                    className={cx(styles.amountInput, !parseFloat(r.amount) && styles.amountZero)}
+                                    inputMode="decimal"
+                                    placeholder="0.00"
+                                    value={r.amount}
+                                    onChange={e => edit(sec, r.id, { amount: e.target.value.replace(/[^0-9.]/g, '') })}
+                                    onBlur={() => setter(sec)(list => list.map(x => x.id === r.id ? { ...x, amount: (parseFloat(x.amount) || 0).toFixed(2) } : x))}
+                                />
+                            </span>
+                            <button className={styles.removeBtn} onClick={() => removeRow(sec, r.id)} aria-label="Remove row">✕</button>
+                            {open && (
+                                <>
+                                    <div className={styles.dropOverlay} onClick={() => setOpenDrop(null)} />
+                                    <div className={styles.drop}>
+                                        {options.map(o => (
+                                            <button
+                                                key={o.id}
+                                                className={cx(styles.dropOption, o.id === r.category && styles.dropOptionActive)}
+                                                onClick={() => { edit(sec, r.id, { category: o.id }); setOpenDrop(null); }}
+                                            >
+                                                <span className={styles.swatch} style={{ background: o.color }} />
+                                                <span className={styles.dropCode}>{o.code}</span>
+                                                {o.id}
+                                                <span className={styles.dropCheck}>{o.id === r.category ? '✓' : ''}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    );
+                })}
+                <button className={styles.addRowBtn} onClick={() => addRow(sec)}>+ ADD {addLabel} ROW</button>
+            </section>
         );
     }
 
     return (
         <div className={styles.page}>
-            <div className={styles.header}>
-                <div>
-                    <h1 className="pageTitle">Budget Planner</h1>
-                    <p className="pageSubtitle">Plan your expected income and fixed expenses.</p>
-                </div>
-                <div className={styles.headerRight}>
-                    <MonthPicker
-                        year={year}
-                        month={month}
-                        onChange={(y, m) => { setYear(y); setMonth(m); }}
-                    />
+            <div className={styles.sticky}>
+                <div className={styles.toolbar}>
+                    <button className={styles.navBtn} onClick={() => step(-1)} aria-label="Previous month">‹</button>
+                    <span className={styles.monthLabel}>{label}</span>
+                    <button className={styles.navBtn} onClick={() => step(1)} aria-label="Next month">›</button>
+                    <span className={cx(styles.status, styles.desktopOnly)} style={{ color: status.color }}>
+                        <span className={styles.dot} style={{ background: status.color }} />{status.text}
+                    </span>
+                    {dirty && <span className={cx(styles.unsaved, styles.desktopOnly)}>· UNSAVED CHANGES</span>}
                     <button
-                        className={cx(styles.saveBtn, saved && styles.saveBtnSaved)}
+                        className={cx(styles.saveBtn, saving === 'saving' && styles.saveBusy, saving === 'saved' && styles.saveDone)}
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving === 'saving' || loading}
                     >
-                        {saved ? '✓ Saved' : saving ? 'Saving...' : 'Save Month'}
+                        {saving === 'saving' ? 'SAVING…' : saving === 'saved' ? '✓ SAVED' : 'SAVE MONTH'}
                     </button>
+                </div>
+                <div className={cx(styles.statusLine, styles.phoneOnly)} style={{ color: status.color }}>
+                    <span className={styles.dot} style={{ background: status.color }} />{status.text}
+                    {dirty && <span className={styles.unsavedShort}>· UNSAVED</span>}
+                </div>
+                {pending && (
+                    <div className={styles.confirm}>
+                        <span className={styles.confirmText}>You have unsaved changes in {label}. Switching month will discard them.</span>
+                        <button className={styles.confirmBtn} onClick={() => setPending(null)}>STAY</button>
+                        <button className={cx(styles.confirmBtn, styles.confirmDiscard)} onClick={() => goTo(pending.year, pending.month)}>
+                            DISCARD &amp; SWITCH
+                        </button>
+                    </div>
+                )}
+                <div className={styles.summary}>
+                    <div className={styles.sumCell}>
+                        <span className={styles.sumLabel}>INCOME</span>
+                        <span className={cx(styles.sumValue, 'num')} style={{ color: 'var(--income)' }}>{fmt(totalIncome)}</span>
+                    </div>
+                    <div className={styles.sumCell}>
+                        <span className={styles.sumLabel}>EXPENSES</span>
+                        <span className={cx(styles.sumValue, 'num')} style={{ color: 'var(--expense)' }}>{fmt(totalExpenses)}</span>
+                    </div>
+                    <div className={styles.sumCell}>
+                        <span className={styles.sumLabel}>NET SAVINGS</span>
+                        <span
+                            className={cx(styles.sumValue, 'num')}
+                            style={{ color: net < 0 ? 'var(--neg)' : net > 0 ? 'var(--pos)' : 'var(--muted)' }}
+                        >
+                            {fmtSigned(net)}
+                        </span>
+                    </div>
+                    <div className={cx(styles.sumCell, styles.rateCell)}>
+                        <span className={styles.sumLabel}>SAVINGS RATE · {rate === null ? '—' : `${rate}%`}</span>
+                        <SegmentBar rate={rate} />
+                    </div>
                 </div>
             </div>
 
-            {loading ? (
-                <p className={styles.loading}>Loading...</p>
-            ) : (
-                <div className={styles.grid}>
-                    {/* Income */}
-                    <section className={styles.card}>
-                        <h2 className={styles.sectionTitleIncome}>
-                            <Payments className={styles.sectionIcon} />
-                            Income
-                        </h2>
-                        <div className={styles.rows}>
-                            {income.map(row => (
-                                <div key={row.id} className={styles.row}>
-                                    <div className={styles.rowMain}>
-                                        {renderCategoryPill(row.id, row.category, INCOME_CATEGORIES, c => updateIncome(row.id, { category: c }))}
-                                        <input
-                                            className={styles.labelInput}
-                                            type="text"
-                                            placeholder="Label"
-                                            value={row.label}
-                                            onChange={e => updateIncome(row.id, { label: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className={styles.rowActions}>
-                                        <div className={styles.inputWrap}>
-                                            <span className={styles.currency}>$</span>
-                                            <input
-                                                className={styles.input}
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                placeholder="0.00"
-                                                value={row.amount}
-                                                onKeyDown={blockInvalidNumericKeys}
-                                                onChange={e => updateIncome(row.id, { amount: e.target.value })}
-                                            />
-                                        </div>
-                                        <button className={styles.deleteBtn} onClick={() => deleteIncomeRow(row.id)} title="Remove">
-                                            <Trash />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <button className={styles.addRowBtn} onClick={addIncomeRow}>+ Add</button>
-                        <div className={styles.totalRow}>
-                            <span className={styles.totalLabel}>Total Income</span>
-                            <span className={styles.totalIncome}>${fmt(totalIncome)}</span>
-                        </div>
-                    </section>
+            <div className={cx(styles.body, loading && styles.dim)}>
+                <div className={styles.sections}>
+                    {renderSection('income', 'INCOME', 'INCOME', income, INCOME_CATEGORIES, incomeCategory, totalIncome, 'var(--income)')}
+                    {renderSection('fixed', 'FIXED EXPENSES', 'FIXED', fixed, FIXED_CATEGORIES, fixedCategory, totalFixed, 'var(--expense)')}
+                </div>
 
-                    {/* Expenses */}
-                    <div className={styles.expenseCol}>
-                        <section className={styles.card}>
-                            <h2 className={styles.sectionTitleFixed}>
-                                <Bank className={styles.sectionIcon} />
-                                Fixed Expenses
-                            </h2>
-                            <div className={styles.rows}>
-                                {fixed.map(row => (
-                                    <div key={row.id} className={styles.row}>
-                                        <div className={styles.rowMain}>
-                                            {renderCategoryPill(row.id, row.category, EXPENSE_CATEGORIES, c => updateFixed(row.id, { category: c }))}
-                                            <input
-                                                className={styles.labelInput}
-                                                type="text"
-                                                placeholder="Label"
-                                                value={row.label}
-                                                onChange={e => updateFixed(row.id, { label: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className={styles.rowActions}>
-                                            <div className={styles.inputWrap}>
-                                                <span className={styles.currency}>$</span>
-                                                <input
-                                                    className={styles.input}
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    placeholder="0.00"
-                                                    value={row.amount}
-                                                    onKeyDown={blockInvalidNumericKeys}
-                                                    onChange={e => updateFixed(row.id, { amount: e.target.value })}
-                                                />
-                                            </div>
-                                            <button className={styles.deleteBtn} onClick={() => deleteFixedRow(row.id)} title="Remove">
-                                                <Trash />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <button className={styles.addRowBtn} onClick={addFixedRow}>+ Add</button>
-                        </section>
-
-                        <section className={styles.card}>
-                            <div className={styles.variableHeader}>
-                                <h2 className={styles.sectionTitleVariable}>
-                                    <DailyLog className={styles.sectionIcon} />
-                                    Variable Expenses
-                                </h2>
-                                <span className={styles.badge}>Auto-pulled from Daily Log</span>
-                            </div>
-                            {variableExpenses.length === 0 ? (
-                                <p className={styles.variableEmpty}>No daily log entries for this month yet.</p>
-                            ) : (
-                                <div className={styles.varRows}>
-                                    {variableExpenses.map(({ category, total }) => {
-                                        const Icon = CATEGORY_ICONS[category] ?? OthersGrid;
-                                        const color = CATEGORY_COLORS[category] ?? '#6B7280';
-                                        return (
-                                            <div key={category} className={styles.varRow}>
-                                                <div className={styles.varRowLeft}>
-                                                    <span className={styles.varIconWrap} style={{ background: `${color}22` }}>
-                                                        <Icon width="16" height="16" style={{ color }} />
-                                                    </span>
-                                                    <span className={styles.varCatName}>{category}</span>
-                                                </div>
-                                                <span className={styles.varAmt}>${fmt(total)}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                            <div className={styles.totalRow}>
-                                <span className={styles.totalLabel}>Total Expenses</span>
-                                <span className={styles.totalExpense}>${fmt(totalExpenses)}</span>
-                            </div>
-                        </section>
+                <div className={styles.variable}>
+                    <div className={styles.sectionHead}>
+                        <span className={styles.sectionTitle}>
+                            VARIABLE <span className={styles.dimText}>· AUTO-PULLED FROM DAILY LOG · READ-ONLY</span>
+                        </span>
+                        <span className="num" style={{ color: 'var(--expense)' }}>{fmt(totalVariable)}</span>
                     </div>
-                </div>
-            )}
-
-            {/* Sticky summary bar */}
-            <div className={styles.summaryBar}>
-                <div className={styles.summaryItem}>
-                    <span className={styles.summaryLabel}>Total Income</span>
-                    <span className={styles.summaryIncome}>${fmt(totalIncome)}</span>
-                </div>
-                <div className={styles.summaryDivider} />
-                <div className={styles.summaryItem}>
-                    <span className={styles.summaryLabel}>Total Expenses</span>
-                    <span className={styles.summaryExpense}>${fmt(totalExpenses)}</span>
-                </div>
-                <div className={styles.summaryDivider} />
-                <div className={cx(styles.summaryItem, styles.summaryNetBox)}>
-                    <span className={styles.summaryLabel}>Net Savings</span>
-                    <span className={cx(styles.summaryNet, netSavings >= 0 ? styles.positive : styles.negative)}>
-                        {netSavings < 0 ? '-' : ''}${fmt(Math.abs(netSavings))}
-                    </span>
-                </div>
-                <div className={styles.ringWrap}>
-                    <svg viewBox="0 0 36 36" className={styles.ring}>
-                        <path
-                            className={styles.ringBg}
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none" strokeDasharray="100,100"
-                        />
-                        <path
-                            className={styles.ringFg}
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none"
-                            strokeDasharray={`${savingsPercent},100`}
-                            strokeLinecap="round"
-                        />
-                    </svg>
-                    <span className={styles.ringLabel}>{savingsPercent}%</span>
+                    {variable.length === 0 ? (
+                        <div className={styles.varEmpty}>No daily log entries for this month yet.</div>
+                    ) : variable.map(v => (
+                        <div key={v.category} className={styles.varRow}>
+                            <CategoryTag category={dailyCategory(v.category)} />
+                            {v.category}
+                            <span className={cx(styles.varAmt, 'num')}>{fmt(v.total)}</span>
+                        </div>
+                    ))}
+                    <div className={styles.totalRow}>
+                        <span className={styles.totalLabel}>TOTAL EXPENSES <span className={styles.dimText}>· FIXED + DAILY</span></span>
+                        <span className="num" style={{ color: 'var(--expense)' }}>{fmt(totalExpenses)}</span>
+                    </div>
                 </div>
             </div>
         </div>
