@@ -4,26 +4,29 @@ export function createObjectId() {
     return new ObjectId();
 }
 
-let cachedClient = null;
-let cachedDb = null;
+// One shared connection per server instance. The promise (not the client) is cached so
+// concurrent first requests share it, and it lives on globalThis so dev hot reloads reuse it.
+const cache = globalThis.__spendlyMongo ?? (globalThis.__spendlyMongo = { promise: null });
+
+/** "mongodb+srv://user:secret@host/" → "mongodb+srv://host/" (never log credentials) */
+function redact(uri) {
+    return String(uri).replace(/\/\/[^@/]+@/, '//');
+}
 
 export async function connectToDb() {
-    if (cachedClient && cachedDb) return cachedDb;
-
-    const client = new MongoClient(process.env.MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    });
-
-    await client.connect();
-    const db = client.db(process.env.MONGODB_DBNAME);
-
-    cachedClient = client;
-    cachedDb = db;
-
-    console.log(`Connected to MongoDB at ${process.env.MONGODB_URI}, db: ${process.env.MONGODB_DBNAME}`);
-
-    return db;
+    if (!cache.promise) {
+        const client = new MongoClient(process.env.MONGODB_URI);
+        cache.promise = client.connect()
+            .then(() => {
+                console.log(`Connected to MongoDB at ${redact(process.env.MONGODB_URI)}, db: ${process.env.MONGODB_DBNAME}`);
+                return client.db(process.env.MONGODB_DBNAME);
+            })
+            .catch(err => {
+                cache.promise = null; // let the next request retry
+                throw err;
+            });
+    }
+    return cache.promise;
 }
 
 export async function findUserByEmail(email) {
@@ -42,7 +45,7 @@ export async function createUser(id, email, name, password) {
         createdAt: new Date(),
     });
 
-    if (result.insertedCount !== 1) {
+    if (!result.acknowledged) {
         throw new Error('Failed to insert user');
     }
 }
