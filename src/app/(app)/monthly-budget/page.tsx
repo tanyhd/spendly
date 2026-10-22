@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import type { BudgetRow } from '@/services/budget';
 import cx from 'classnames';
 import {
     INCOME_CATEGORIES, FIXED_CATEGORIES, dailyCategory, incomeCategory, fixedCategory, type Category,
 } from '@/common/constants/categories';
 import { useExpense } from '@/context/ExpenseContext';
 import { useToast } from '@/context/ToastContext';
+import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import CategoryTag from '@/common/components/CategoryTag';
 import SegmentBar from '@/common/components/SegmentBar';
 import { fmt, fmtSigned, fmtMonth } from '@/lib/format';
@@ -42,7 +44,7 @@ function makeExpenseDefaults(): Row[] {
     ];
 }
 
-function toRows(list: any[]): Row[] {
+function toRows(list: BudgetRow[]): Row[] {
     return list.map(r => ({ id: uid(), label: r.label ?? '', category: r.category, amount: (Number(r.amount) || 0).toFixed(2) }));
 }
 
@@ -52,6 +54,7 @@ export default function MonthlyBudgetPage() {
     const now = new Date();
     const { version } = useExpense();
     const toast = useToast();
+    const { setGuard } = useNavigationGuard();
     const [year, setYear] = useState(now.getFullYear());
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [income, setIncome] = useState<Row[]>([]);
@@ -63,6 +66,8 @@ export default function MonthlyBudgetPage() {
     const [saving, setSaving] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [openDrop, setOpenDrop] = useState<string | null>(null);
     const [pending, setPending] = useState<{ year: number; month: number } | null>(null);
+    // Set when the user tries to leave the page with unsaved edits; calling it leaves
+    const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
     const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const key = `${year}-${month}`;
@@ -99,7 +104,7 @@ export default function MonthlyBudgetPage() {
     // An expense added from the shell only changes the read-only variable list,
     // so refresh just that and keep any unsaved row edits
     const monthRef = useRef({ year, month });
-    monthRef.current = { year, month };
+    useEffect(() => { monthRef.current = { year, month }; }, [year, month]);
     useEffect(() => {
         if (version === 0) return;
         const { year: y, month: m } = monthRef.current;
@@ -110,6 +115,28 @@ export default function MonthlyBudgetPage() {
 
     useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
 
+    // Unsaved edits: ask before leaving the page in-app, and let the browser warn on close/reload
+    useEffect(() => {
+        if (!dirty) return;
+        setGuard(proceed => { setPending(null); setPendingLeave(() => proceed); });
+        function onBeforeUnload(e: BeforeUnloadEvent) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => {
+            setGuard(null);
+            window.removeEventListener('beforeunload', onBeforeUnload);
+        };
+    }, [dirty, setGuard]);
+
+    function discardAndLeave() {
+        const proceed = pendingLeave;
+        setPendingLeave(null);
+        setGuard(null);
+        proceed?.();
+    }
+
     function goTo(y: number, m: number) {
         setYear(y);
         setMonth(m);
@@ -119,7 +146,7 @@ export default function MonthlyBudgetPage() {
     function step(delta: number) {
         const d = new Date(year, month - 1 + delta, 1);
         const target = { year: d.getFullYear(), month: d.getMonth() + 1 };
-        if (dirty) setPending(target);
+        if (dirty) { setPendingLeave(null); setPending(target); }
         else goTo(target.year, target.month);
     }
 
@@ -270,6 +297,15 @@ export default function MonthlyBudgetPage() {
                         <button className={styles.confirmBtn} onClick={() => setPending(null)}>STAY</button>
                         <button className={cx(styles.confirmBtn, styles.confirmDiscard)} onClick={() => goTo(pending.year, pending.month)}>
                             DISCARD &amp; SWITCH
+                        </button>
+                    </div>
+                )}
+                {pendingLeave && (
+                    <div className={styles.confirm} role="alertdialog" aria-label="Unsaved changes">
+                        <span className={styles.confirmText}>You have unsaved changes in {label}. Leaving this page will discard them.</span>
+                        <button className={styles.confirmBtn} onClick={() => setPendingLeave(null)}>STAY</button>
+                        <button className={cx(styles.confirmBtn, styles.confirmDiscard)} onClick={discardAndLeave}>
+                            DISCARD &amp; LEAVE
                         </button>
                     </div>
                 )}

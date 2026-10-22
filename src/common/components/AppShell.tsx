@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import cx from 'classnames';
 import { useAuth } from '@/context/AuthContext';
 import { useExpense } from '@/context/ExpenseContext';
+import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { initials } from '@/lib/format';
 import styles from './AppShell.module.css';
 
@@ -22,16 +23,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const router = useRouter();
     const { user, logout } = useAuth();
     const { openAdd, isOpen: sheetOpen } = useExpense();
-    const [menuOpen, setMenuOpen] = useState(false);
+    const { leave } = useNavigationGuard();
+    // The menu belongs to the page it was opened on, so navigating closes it
+    const [menuPath, setMenuPath] = useState<string | null>(null);
+    const menuOpen = menuPath === pathname;
+    const setMenuOpen = (open: boolean) => setMenuPath(open ? pathname : null);
 
     const current = NAV.find(n => pathname.startsWith(n.href));
     const userInitials = initials(user?.name);
 
-    useEffect(() => setMenuOpen(false), [pathname]);
-
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') return setMenuOpen(false);
+            if (e.key === 'Escape') return setMenuPath(null);
             const tag = (e.target as HTMLElement).tagName?.toLowerCase();
             if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
             if (sheetOpen || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -41,11 +44,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 return;
             }
             const n = NAV[parseInt(e.key, 10) - 1];
-            if (n) router.push(n.href);
+            if (n && !pathname.startsWith(n.href)) leave(() => router.push(n.href));
         }
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [openAdd, router, sheetOpen]);
+    }, [openAdd, router, sheetOpen, leave, pathname]);
 
     return (
         <div className={styles.shell}>
@@ -64,7 +67,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </button>
                 <button
                     className={cx(styles.avatar, menuOpen && styles.avatarOpen)}
-                    onClick={() => setMenuOpen(o => !o)}
+                    onClick={() => setMenuOpen(!menuOpen)}
                     aria-label="Account menu"
                 >
                     {userInitials}
@@ -76,7 +79,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <div className={styles.phoneTitle}><span className={styles.mark} />{current?.label ?? 'SPENDLY'}</div>
                 <button
                     className={cx(styles.avatar, styles.avatarPhone, menuOpen && styles.avatarOpen)}
-                    onClick={() => setMenuOpen(o => !o)}
+                    onClick={() => setMenuOpen(!menuOpen)}
                     aria-label="Account menu"
                 >
                     {userInitials}
@@ -108,7 +111,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                             </div>
                         </div>
                         <Link href="/settings" className={cx(styles.menuItem, styles.phoneOnlyBlock)}>SETTINGS</Link>
-                        <button className={cx(styles.menuItem, styles.signOut)} onClick={logout}>SIGN OUT</button>
+                        <button className={cx(styles.menuItem, styles.signOut)} onClick={() => { setMenuOpen(false); leave(logout); }}>SIGN OUT</button>
                     </div>
                 </>
             )}
