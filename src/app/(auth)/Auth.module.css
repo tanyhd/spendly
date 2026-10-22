@@ -5,14 +5,37 @@
     background: var(--bg);
 }
 
-/* Brand panel */
+/* Brand panel (also the game board) */
 .brandPanel {
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     gap: 28px;
     padding: 32px 48px;
     border-right: 1px solid var(--line);
+    background: var(--bg);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.brandPlaying {
+    cursor: none;
+    touch-action: none;
+}
+
+/* Phone: the board takes over the screen while playing */
+.brandFull {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    justify-content: flex-start;
+}
+
+/* The HUD needs the top row on a narrow screen */
+.brandFull .brand {
+    visibility: hidden;
 }
 
 .brand {
@@ -22,6 +45,125 @@
     font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: 0.06em;
+}
+
+.themeBtn {
+    margin-left: auto;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+}
+
+.themeBtn:hover {
+    color: var(--text);
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+.faded {
+    opacity: 0;
+}
+
+.motifBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.playHint {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+}
+
+.playHint:hover {
+    color: var(--primary);
+}
+
+.phoneText {
+    display: none;
+}
+
+.canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+}
+
+.hud {
+    position: absolute;
+    top: 32px;
+    right: 32px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-left: 12px;
+    background: var(--bg);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.lives {
+    color: var(--primary);
+    letter-spacing: 2px;
+}
+
+.hudValue {
+    color: var(--text);
+}
+
+.hudDim {
+    color: var(--dim);
+}
+
+.quitBtn {
+    pointer-events: auto;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    background: transparent;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+.hudMsgWrap {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 44px;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    pointer-events: none;
+}
+
+.hudMsg {
+    padding: 6px 10px;
+    background: var(--bg);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+.msgNeg {
+    color: var(--neg);
+}
+
+.msgPos {
+    color: var(--pos);
 }
 
 .mark {
@@ -48,16 +190,17 @@
 .cursor {
     color: var(--primary);
     animation: sp-blink 1s steps(1) infinite;
+    cursor: pointer;
 }
 
 .motif {
     display: grid;
-    grid-template-columns: repeat(14, 18px);
+    grid-template-columns: repeat(14, 24px);
     gap: 3px;
 }
 
 .motif span {
-    height: 18px;
+    height: 24px;
 }
 
 .tagline {
@@ -132,7 +275,7 @@
 
 .inputInvalid,
 .inputInvalid:focus-within {
-    border-color: #6B2030;
+    border-color: var(--err-bd);
 }
 
 .input {
@@ -158,8 +301,8 @@
 
 .error {
     padding: 10px 12px;
-    border: 1px solid #6B2030;
-    background: #1E0F12;
+    border: 1px solid var(--err-bd);
+    background: var(--err-bg);
     color: var(--danger);
     font-size: 0.75rem;
 }
@@ -212,9 +355,32 @@
         font-size: 1.75rem;
     }
 
-    .motif,
-    .tagline {
+    /* Phone keeps the heatmap (it's the game board), stretched to the width */
+    .motif {
+        grid-template-columns: repeat(14, minmax(0, 1fr));
+    }
+
+    .motif span {
+        height: 16px;
+    }
+
+    .tagline,
+    .desktopText {
         display: none;
+    }
+
+    .phoneText {
+        display: inline;
+    }
+
+    .hud {
+        top: 12px;
+        right: 12px;
+        gap: 12px;
+    }
+
+    .hudMsgWrap {
+        bottom: 72px;
     }
 
     .formPanel {
