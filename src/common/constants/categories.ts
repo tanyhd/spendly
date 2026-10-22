@@ -1,13 +1,3 @@
-import FoodDining from '@/common/icons/FoodDining';
-import TransportCar from '@/common/icons/TransportCar';
-import ShoppingBag from '@/common/icons/ShoppingBag';
-import HealthHeart from '@/common/icons/HealthHeart';
-import EntertainmentIcon from '@/common/icons/EntertainmentIcon';
-import EducationBook from '@/common/icons/EducationBook';
-import UtilitiesBolt from '@/common/icons/UtilitiesBolt';
-import OthersGrid from '@/common/icons/OthersGrid';
-import Bank from '@/common/icons/Bank';
-
 export type Category = { id: string; code: string; color: string };
 
 export const DAILY_CATEGORIES: Category[] = [
@@ -46,25 +36,3 @@ function finder(list: Category[]) {
 export const dailyCategory = finder(DAILY_CATEGORIES);
 export const fixedCategory = finder(FIXED_CATEGORIES);
 export const incomeCategory = finder(INCOME_CATEGORIES);
-
-// Legacy colour/icon maps, still used by pages not yet migrated to the new design
-export const CATEGORY_COLORS: Record<string, string> = {
-    ...Object.fromEntries(FIXED_CATEGORIES.map(c => [c.id, c.color])),
-    ...Object.fromEntries(DAILY_CATEGORIES.map(c => [c.id, c.color])),
-};
-
-export const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
-    Food: FoodDining,
-    Transport: TransportCar,
-    Shopping: ShoppingBag,
-    Health: HealthHeart,
-    Entertainment: EntertainmentIcon,
-    Education: EducationBook,
-    Utilities: UtilitiesBolt,
-    Others: OthersGrid,
-    Housing: Bank,
-    Tax: OthersGrid,
-    Insurance: OthersGrid,
-    Family: OthersGrid,
-    Other: OthersGrid,
-};

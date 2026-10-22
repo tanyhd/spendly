@@ -38,15 +38,6 @@
 
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-sans: var(--font-plex-sans), Arial, sans-serif;
-
-  /* Legacy names still used by pages not yet migrated */
-  --surface-2: var(--bg);
-  --border: var(--line);
-  --text-muted: var(--muted);
-  --primary-dark: var(--primary);
-  --primary-light: var(--primary-tint);
-  --primary-gradient: var(--primary);
-  --success: var(--pos);
 }
 
 *, *::before, *::after {
@@ -106,14 +97,3 @@ input::placeholder {
   50% { opacity: 0; }
 }
 
-/* Legacy page headings (removed once every page is migrated) */
-.pageTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 0.25rem;
-}
-
-.pageSubtitle {
-  color: var(--muted);
-}
