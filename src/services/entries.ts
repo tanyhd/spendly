@@ -73,6 +73,12 @@ export async function getWeekEntries(userId: string, weekStart: number, weekEnd:
         .toArray();
 }
 
+/** Entries from start to end (YYYYMMDD, inclusive), any order */
+export async function getEntriesInRange(userId: string, start: number, end: number): Promise<EntryDoc[]> {
+    const { entries } = await collections();
+    return entries.find({ userId: toObjectId(userId), date: { $gte: start, $lte: end } }).toArray();
+}
+
 export async function getMonthEntries(userId: string, year: number, month: number): Promise<EntryDoc[]> {
     const { entries } = await collections();
     const { start, end } = monthRange(year, month);

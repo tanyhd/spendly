@@ -4,7 +4,9 @@ import { todayInt } from '@/lib/format';
 import { budgetProgress, suggestLimits, type BudgetProgress, type CategoryLimit } from '@/lib/budgetProgress';
 import { billTotals, upcomingBills, type BillTotals } from '@/lib/bills';
 import { getBudget, getBudgetForMonth, decryptRows, decryptFixed, decryptLimits } from './budgets';
-import { getMonthEntries, getRecentTransactions, toEntry, type Entry } from './entries';
+import { getEntriesInRange, getMonthEntries, getRecentTransactions, toEntry, type Entry } from './entries';
+import { buckets, periodLabel, periodRange, samePointInPrevious, type DateRange, type Period } from '@/lib/period';
+import { buildInsights, type Insight, type InsightInput } from '@/lib/insights';
 
 export type CategoryTotal = { category: string; total: number };
 export type DailyTotal = { date: number; total: number };
@@ -96,6 +98,136 @@ export async function getDashboardData(userId: string, year: number, month: numb
         dailyTotals,
         budgets: limits.length > 0 ? budgetProgress(limits, variableTotals, year, month, today) : null,
         bills: billTotals(fixedExpenses, year, month, today),
+    };
+}
+
+export type SummaryBar = {
+    label: string;
+    start: number;
+    end: number;
+    daily: number;
+    /** Monthly figures, so only on month bars (quarter and year views); null on day bars */
+    income: number | null;
+    fixed: number | null;
+};
+
+export type SummaryCategory = {
+    category: string;
+    spent: number;
+    /** Same stretch of the previous period; null when there's nothing to compare (a future period) */
+    prevSpent: number | null;
+    change: number | null;
+};
+
+export type Summary = {
+    period: Period;
+    label: string;
+    range: DateRange;
+    /** The stretch of the previous period it's compared with (same number of days while still running) */
+    compareRange: DateRange | null;
+    timing: 'past' | 'current' | 'future';
+    /** Income, fixed, net and savings rate are null for a week: income is planned per month */
+    income: number | null;
+    fixed: number | null;
+    daily: number;
+    net: number | null;
+    savingsRate: number | null;
+    bars: SummaryBar[];
+    byCategory: SummaryCategory[];
+    pace: { spentSoFar: number; prevSameDay: number } | null;
+    insights: Insight[];
+};
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+function monthsIn(r: DateRange) {
+    const out: { year: number; month: number }[] = [];
+    for (let y = Math.floor(r.start / 10000), m = Math.floor(r.start / 100) % 100; y * 100 + m <= Math.floor(r.end / 100);) {
+        out.push({ year: y, month: m });
+        if (++m > 12) { m = 1; y++; }
+    }
+    return out;
+}
+
+/**
+ * The dashboard for a week, month, quarter or year. Income and fixed costs come from saved plans
+ * only (as on the dashboard); daily spending from the daily log.
+ */
+export async function getSummary(userId: string, period: Period, anchor: number, today = todayInt()): Promise<Summary> {
+    const range = periodRange(period, anchor);
+    const timing = today > range.end ? 'past' : today < range.start ? 'future' : 'current';
+    const compareRange = samePointInPrevious(period, anchor, today);
+    const isWeek = period === 'week';
+
+    const [entries, prevEntries, plans] = await Promise.all([
+        getEntriesInRange(userId, range.start, range.end),
+        compareRange ? getEntriesInRange(userId, compareRange.start, compareRange.end) : Promise.resolve([]),
+        isWeek ? Promise.resolve([]) : Promise.all(monthsIn(range).map(async m => ({ ...m, plan: await getBudget(userId, m.year, m.month) }))),
+    ]);
+
+    const spent = entries.map(e => ({ date: e.date, category: e.category, amount: decryptAmount(e.amount) }));
+    const sumIn = (s: number, e: number) => r2(spent.filter(x => x.date >= s && x.date <= e).reduce((t, x) => t + x.amount, 0));
+    const planTotals = new Map(plans.map(p => [p.year * 100 + p.month, {
+        income: decryptRows(p.plan?.income).reduce((t, r) => t + r.amount, 0),
+        fixed: decryptRows(p.plan?.fixedExpenses).reduce((t, r) => t + r.amount, 0),
+    }]));
+
+    const bars: SummaryBar[] = buckets(period, anchor).map(b => {
+        const month = b.start !== b.end ? planTotals.get(Math.floor(b.start / 100)) : undefined;
+        return {
+            ...b,
+            daily: sumIn(b.start, b.end),
+            income: month ? r2(month.income) : null,
+            fixed: month ? r2(month.fixed) : null,
+        };
+    });
+
+    const daily = sumIn(range.start, range.end);
+    const income = isWeek ? null : r2([...planTotals.values()].reduce((t, p) => t + p.income, 0));
+    const fixed = isWeek ? null : r2([...planTotals.values()].reduce((t, p) => t + p.fixed, 0));
+    const net = income === null || fixed === null ? null : r2(income - fixed - daily);
+    const savingsRate = net !== null && income ? Math.round((net / income) * 1000) / 1000 : null;
+
+    const now: Record<string, number> = {};
+    for (const x of spent) add(now, x.category, x.amount);
+    const before: Record<string, number> = {};
+    for (const e of prevEntries) add(before, e.category, decryptAmount(e.amount));
+    const byCategory: SummaryCategory[] = [...new Set([...Object.keys(now), ...Object.keys(before)])]
+        .map(category => {
+            const s = r2(now[category] ?? 0);
+            const p = compareRange ? r2(before[category] ?? 0) : null;
+            return { category, spent: s, prevSpent: p, change: p === null ? null : r2(s - p) };
+        })
+        .sort((a, b) => b.spent - a.spent || (b.prevSpent ?? 0) - (a.prevSpent ?? 0));
+
+    const prevTotal = r2(Object.values(before).reduce((t, v) => t + v, 0));
+    const pace = timing === 'current' && compareRange ? { spentSoFar: daily, prevSameDay: prevTotal } : null;
+
+    // Category limits and bills belong to a month: shown for the month view of that month
+    let budgets: BudgetProgress | null = null;
+    let bills: InsightInput['bills'] = null;
+    if (timing === 'current') {
+        const y = Math.floor(today / 10000), m = Math.floor(today / 100) % 100;
+        const [plan, upcoming] = await Promise.all([
+            period === 'month' ? getBudget(userId, y, m) : Promise.resolve(null),
+            getUpcomingBills(userId, 7, today),
+        ]);
+        const limits = decryptLimits(plan?.categoryBudgets).map(l => ({ category: l.category, amount: l.amount }));
+        if (limits.length) budgets = budgetProgress(limits, now, y, m, today);
+        const unpaid = upcoming.items.filter(i => !i.paid);
+        const overdue = unpaid.filter(i => i.status === 'overdue');
+        const soon = unpaid.filter(i => i.status !== 'overdue');
+        bills = {
+            overdueCount: overdue.length, overdueAmount: r2(overdue.reduce((t, i) => t + i.amount, 0)),
+            dueSoonCount: soon.length, dueSoonAmount: r2(soon.reduce((t, i) => t + i.amount, 0)),
+            days: 7,
+        };
+    }
+
+    return {
+        period, label: periodLabel(period, anchor), range, compareRange, timing,
+        income, fixed, daily, net, savingsRate, bars, byCategory, pace,
+        insights: buildInsights({ period, isCurrent: timing === 'current', budgets, byCategory, pace, bills }),
     };
 }
 

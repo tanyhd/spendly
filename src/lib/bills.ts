@@ -1,5 +1,5 @@
 // Bills are the fixed expenses on the Budget page. Pure, so it can be tested for any date.
-import { fromDateInt, toDateInt } from './format';
+import { addDaysInt } from './format';
 
 export type Bill = { id: string; label: string; category: string; amount: number; dueDay: number | null; paid: boolean };
 
@@ -35,12 +35,6 @@ export function billStatus(due: number, paid: boolean, today: number): BillStatu
     return due < today && !paid ? 'overdue' : 'upcoming';
 }
 
-export function addDays(day: number, n: number) {
-    const d = fromDateInt(day);
-    d.setDate(d.getDate() + n);
-    return toDateInt(d);
-}
-
 /**
  * Totals for one month. Bills without a due day still count. Overdue only applies to the
  * current month: an unpaid bill in a past month is just unpaid.
@@ -62,7 +56,7 @@ export type MonthBills = { year: number; month: number; bills: Bill[]; planSaved
  * ones, soonest first. Bills without a due day are left out.
  */
 export function upcomingBills(months: MonthBills[], today: number, days: number) {
-    const end = addDays(today, days - 1);
+    const end = addDaysInt(today, days - 1);
     const thisMonthKey = Math.floor(today / 100);
     const items: UpcomingBill[] = [];
     for (const { year, month, bills, planSaved } of months) {

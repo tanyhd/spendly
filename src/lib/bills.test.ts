@@ -1,4 +1,4 @@
-import { dueDate, billStatus, billTotals, upcomingBills, addDays, type Bill } from './bills';
+import { dueDate, billStatus, billTotals, upcomingBills, type Bill } from './bills';
 
 const bill = (id: string, amount: number, dueDay: number | null, paid = false): Bill =>
     ({ id, label: id, category: 'Housing', amount, dueDay, paid });
@@ -70,10 +70,5 @@ describe('upcomingBills', () => {
     it('a clamped due day lands in the window (31 → Feb 28)', () => {
         const feb = { year: 2026, month: 2, planSaved: true, bills: [bill('Rent', 1000, 31)] };
         expect(upcomingBills([feb], 20260225, 7).items[0].dueDate).toBe(20260228);
-    });
-
-    it('addDays crosses month and year ends', () => {
-        expect(addDays(20261231, 1)).toBe(20270101);
-        expect(addDays(20260228, 1)).toBe(20260301);
     });
 });

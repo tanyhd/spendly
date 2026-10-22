@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { encryptAmount } from '@/lib/crypto';
 import { parseDateInt } from '@/lib/period';
-import { addDays } from '@/lib/bills';
+import { addDaysInt } from '@/lib/format';
 import { getWeekEntries, createEntry, parseEntryInput, toEntry } from '@/services/entries';
 
 async function getAuth(req: NextRequest) {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     if (weekStart === null) return NextResponse.json({ message: 'weekStart must be a real day as YYYYMMDD' }, { status: 400 });
 
     // Seven days from the given day (the page always sends a Monday)
-    const entries = await getWeekEntries(auth.userId, weekStart, addDays(weekStart, 6));
+    const entries = await getWeekEntries(auth.userId, weekStart, addDaysInt(weekStart, 6));
     return NextResponse.json(entries.map(toEntry));
 }
 
