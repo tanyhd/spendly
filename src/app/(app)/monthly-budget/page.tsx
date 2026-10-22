@@ -1,57 +1,68 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { BudgetRow } from '@/services/budgets';
+import type { BudgetRow, CategoryBudget, FixedRow } from '@/services/budgets';
 import cx from 'classnames';
 import {
-    INCOME_CATEGORIES, FIXED_CATEGORIES, dailyCategory, incomeCategory, fixedCategory, type Category,
+    INCOME_CATEGORIES, FIXED_CATEGORIES, DAILY_CATEGORIES, incomeCategory, fixedCategory, type Category,
 } from '@/common/constants/categories';
 import { useExpense } from '@/context/ExpenseContext';
 import { useToast } from '@/context/ToastContext';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import CategoryTag from '@/common/components/CategoryTag';
 import SegmentBar from '@/common/components/SegmentBar';
-import { fmt, fmtSigned, fmtMonth } from '@/lib/format';
+import LimitBar from '@/common/components/LimitBar';
+import { fmt, fmtSigned, fmtMonth, todayInt } from '@/lib/format';
+import { budgetProgress, type CategoryProgress } from '@/lib/budgetProgress';
+import { billTotals, dueDate } from '@/lib/bills';
 import styles from './MonthlyBudget.module.css';
 
-type Row = { id: string; label: string; amount: string; category: string };
+type Row = { id: string; label: string; amount: string; category: string; dueDay: string; paid: boolean };
 type VarEntry = { category: string; total: number };
 type Section = 'income' | 'fixed';
 type Source = { kind: 'saved' } | { kind: 'copied'; year: number; month: number } | { kind: 'template' };
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
+function row(label: string, category: string): Row {
+    return { id: uid(), label, amount: '0.00', category, dueDay: '', paid: false };
+}
+
 function makeIncomeDefaults(): Row[] {
     return [
-        { id: uid(), label: 'Salary', amount: '0.00', category: 'Employment' },
-        { id: uid(), label: 'Commissions', amount: '0.00', category: 'Employment' },
-        { id: uid(), label: 'Bonuses', amount: '0.00', category: 'Employment' },
-        { id: uid(), label: 'Dividends', amount: '0.00', category: 'Investment' },
-        { id: uid(), label: 'Rental Income', amount: '0.00', category: 'Investment' },
-        { id: uid(), label: 'Interest Income', amount: '0.00', category: 'Investment' },
-        { id: uid(), label: 'Misc', amount: '0.00', category: 'Other' },
+        row('Salary', 'Employment'), row('Commissions', 'Employment'), row('Bonuses', 'Employment'),
+        row('Dividends', 'Investment'), row('Rental Income', 'Investment'), row('Interest Income', 'Investment'),
+        row('Misc', 'Other'),
     ];
 }
 
 function makeExpenseDefaults(): Row[] {
     return [
-        { id: uid(), label: 'Utilities & Bills', amount: '0.00', category: 'Housing' },
-        { id: uid(), label: 'Taxes', amount: '0.00', category: 'Tax' },
-        { id: uid(), label: 'Insurance', amount: '0.00', category: 'Insurance' },
-        { id: uid(), label: 'School', amount: '0.00', category: 'Education' },
-        { id: uid(), label: 'Family', amount: '0.00', category: 'Family' },
-        { id: uid(), label: 'Misc', amount: '0.00', category: 'Other' },
+        row('Utilities & Bills', 'Housing'), row('Taxes', 'Tax'), row('Insurance', 'Insurance'),
+        row('School', 'Education'), row('Family', 'Family'), row('Misc', 'Other'),
     ];
 }
 
-function toRows(list: BudgetRow[]): Row[] {
-    return list.map(r => ({ id: r.id || uid(), label: r.label ?? '', category: r.category, amount: (Number(r.amount) || 0).toFixed(2) }));
+function toRows(list: (BudgetRow | FixedRow)[]): Row[] {
+    return list.map(r => ({
+        id: r.id || uid(),
+        label: r.label ?? '',
+        category: r.category,
+        amount: (Number(r.amount) || 0).toFixed(2),
+        dueDay: 'dueDay' in r && r.dueDay ? String(r.dueDay) : '',
+        paid: 'paid' in r && r.paid === true,
+    }));
+}
+
+function toLimits(list: CategoryBudget[] | undefined): Record<string, string> {
+    return Object.fromEntries((list ?? []).map(l => [l.category, l.amount.toFixed(2)]));
 }
 
 const sum = (rows: Row[]) => rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
 
 export default function MonthlyBudgetPage() {
     const now = new Date();
+    const today = todayInt();
     const { version } = useExpense();
     const toast = useToast();
     const { setGuard } = useNavigationGuard();
@@ -59,6 +70,11 @@ export default function MonthlyBudgetPage() {
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [income, setIncome] = useState<Row[]>([]);
     const [fixed, setFixed] = useState<Row[]>([]);
+    // Monthly limit per daily category, as typed ('' = no limit)
+    const [limits, setLimits] = useState<Record<string, string>>({});
+    const [suggested, setSuggested] = useState<Record<string, number>>({});
+    // Fixed rows that exist in the saved plan, so a paid tick can be saved on its own
+    const [savedRowIds, setSavedRowIds] = useState<Set<string>>(new Set());
     const [source, setSource] = useState<Source>({ kind: 'template' });
     const [variable, setVariable] = useState<VarEntry[]>([]);
     const [loadedKey, setLoadedKey] = useState('');
@@ -78,7 +94,8 @@ export default function MonthlyBudgetPage() {
         Promise.all([
             fetch(`/api/budget/${year}/${month}`).then(r => r.ok ? r.json() : null),
             fetch(`/api/daily-log/month/${year}/${month}`).then(r => r.ok ? r.json() : []),
-        ]).then(([data, varData]) => {
+            fetch(`/api/budget/${year}/${month}/suggestions`).then(r => r.ok ? r.json() : { suggestions: [] }),
+        ]).then(([data, varData, sug]) => {
             if (cancelled) return;
             const hasRows = data && ((data.income?.length ?? 0) + (data.fixedExpenses?.length ?? 0)) > 0;
             if (hasRows) {
@@ -92,6 +109,9 @@ export default function MonthlyBudgetPage() {
                 setFixed(makeExpenseDefaults());
                 setSource(data ? { kind: 'saved' } : { kind: 'template' });
             }
+            setLimits(toLimits(data?.categoryBudgets));
+            setSavedRowIds(new Set(data?.source === 'saved' ? (data.fixedExpenses ?? []).map((r: FixedRow) => r.id) : []));
+            setSuggested(Object.fromEntries((sug.suggestions ?? []).map((s: { category: string; amount: number }) => [s.category, s.amount])));
             setVariable(Array.isArray(varData) ? varData : []);
             setDirty(false);
             setSaving('idle');
@@ -101,7 +121,7 @@ export default function MonthlyBudgetPage() {
         return () => { cancelled = true; };
     }, [year, month]);
 
-    // An expense added from the shell only changes the read-only variable list,
+    // An expense added from the shell only changes the daily spending,
     // so refresh just that and keep any unsaved row edits
     const monthRef = useRef({ year, month });
     useEffect(() => { monthRef.current = { year, month }; }, [year, month]);
@@ -154,20 +174,63 @@ export default function MonthlyBudgetPage() {
         return sec === 'income' ? setIncome : setFixed;
     }
 
-    function edit(sec: Section, id: string, patch: Partial<Row>) {
-        setter(sec)(rows => rows.map(r => r.id === id ? { ...r, ...patch } : r));
+    function markDirty() {
         setDirty(true);
         setSaving('idle');
     }
 
+    function edit(sec: Section, id: string, patch: Partial<Row>) {
+        setter(sec)(rows => rows.map(r => r.id === id ? { ...r, ...patch } : r));
+        markDirty();
+    }
+
     function addRow(sec: Section) {
-        setter(sec)(rows => [...rows, { id: uid(), label: '', amount: '0.00', category: sec === 'income' ? 'Employment' : 'Housing' }]);
-        setDirty(true);
+        setter(sec)(rows => [...rows, row('', sec === 'income' ? 'Employment' : 'Housing')]);
+        markDirty();
     }
 
     function removeRow(sec: Section, id: string) {
         setter(sec)(rows => rows.filter(r => r.id !== id));
-        setDirty(true);
+        markDirty();
+    }
+
+    function editLimit(category: string, value: string) {
+        setLimits(l => ({ ...l, [category]: value }));
+        markDirty();
+    }
+
+    /** Fills the categories that have no limit yet with last 3 months' average */
+    function suggest() {
+        const fill = DAILY_CATEGORIES.filter(c => !limits[c.id] && suggested[c.id]);
+        if (fill.length === 0) {
+            toast(Object.keys(suggested).length ? 'EVERY CATEGORY WITH SPENDING HAS A LIMIT' : 'NO SPENDING IN THE LAST 3 MONTHS TO GO BY');
+            return;
+        }
+        setLimits(l => ({ ...l, ...Object.fromEntries(fill.map(c => [c.id, suggested[c.id].toFixed(2)])) }));
+        markDirty();
+        toast(`FILLED ${fill.length} ${fill.length === 1 ? 'LIMIT' : 'LIMITS'} FROM YOUR SPENDING`);
+    }
+
+    /**
+     * A bill already in the saved plan is ticked straight away. Anything else (a new row, or a month
+     * that's only a copy) becomes an unsaved change that SAVE MONTH stores.
+     */
+    async function togglePaid(r: Row) {
+        const paid = !r.paid;
+        setFixed(rows => rows.map(x => x.id === r.id ? { ...x, paid } : x));
+        if (source.kind !== 'saved' || !savedRowIds.has(r.id)) {
+            markDirty();
+            return;
+        }
+        const res = await fetch(`/api/budget/${year}/${month}/bills/${r.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paid }),
+        }).catch(() => null);
+        if (!res?.ok) {
+            setFixed(rows => rows.map(x => x.id === r.id ? { ...x, paid: !paid } : x));
+            toast('COULD NOT UPDATE THE BILL · TRY AGAIN');
+        }
     }
 
     async function handleSave() {
@@ -175,15 +238,23 @@ export default function MonthlyBudgetPage() {
         setSaving('saving');
         // Row ids are kept so the server can track a row across saves (bills need this)
         const strip = (rows: Row[]) => rows.map(r => ({ id: r.id, label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 }));
+        const body = {
+            income: strip(income),
+            fixedExpenses: fixed.map(r => ({ ...strip([r])[0], dueDay: r.dueDay ? Number(r.dueDay) : null, paid: r.paid })),
+            categoryBudgets: Object.entries(limits)
+                .filter(([, v]) => v !== '' && Number.isFinite(parseFloat(v)))
+                .map(([category, v]) => ({ category, amount: parseFloat(v) })),
+        };
         try {
             const res = await fetch(`/api/budget/${year}/${month}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ income: strip(income), fixedExpenses: strip(fixed) }),
+                body: JSON.stringify(body),
             });
             if (!res.ok) throw new Error();
             setDirty(false);
             setSource({ kind: 'saved' });
+            setSavedRowIds(new Set(fixed.map(r => r.id)));
             setSaving('saved');
             if (savedTimer.current) clearTimeout(savedTimer.current);
             savedTimer.current = setTimeout(() => setSaving('idle'), 3000);
@@ -198,8 +269,29 @@ export default function MonthlyBudgetPage() {
     const totalVariable = variable.reduce((s, v) => s + v.total, 0);
     const totalExpenses = totalFixed + totalVariable;
     const net = totalIncome - totalExpenses;
-    const rate = totalIncome > 0 ? Math.max(0, Math.min(100, Math.round((net / totalIncome) * 100))) : null;
+    const rate = totalIncome > 0 ? Math.round((net / totalIncome) * 100) : null;
     const label = fmtMonth(year, month);
+    const isCurrentMonth = Math.floor(today / 100) === year * 100 + month;
+
+    const spentByCategory = Object.fromEntries(variable.map(v => [v.category, v.total]));
+    const limitList = Object.entries(limits)
+        .filter(([, v]) => v !== '' && Number.isFinite(parseFloat(v)))
+        .map(([category, v]) => ({ category, amount: parseFloat(v) }));
+    const progress = limitList.length ? budgetProgress(limitList, spentByCategory, year, month, today) : null;
+    const byCategory = new Map<string, CategoryProgress>(progress?.byCategory.map(c => [c.category, c]) ?? []);
+
+    const bills = billTotals(
+        fixed.map(r => ({ id: r.id, label: r.label, category: r.category, amount: parseFloat(r.amount) || 0, dueDay: r.dueDay ? Number(r.dueDay) : null, paid: r.paid })),
+        year, month, today,
+    );
+
+    /** 'overdue' (due, not paid, this month), 'today', or null */
+    function billState(r: Row): 'overdue' | 'today' | null {
+        if (!isCurrentMonth || !r.dueDay) return null;
+        const due = dueDate(year, month, Number(r.dueDay));
+        if (due === today) return r.paid ? null : 'today';
+        return due < today && !r.paid ? 'overdue' : null;
+    }
 
     const status = source.kind === 'saved'
         ? { text: 'SAVED MONTH', color: 'var(--pos)' }
@@ -207,65 +299,64 @@ export default function MonthlyBudgetPage() {
             ? { text: `COPIED FROM ${fmtMonth(source.year, source.month)} · NOT SAVED`, color: 'var(--primary)' }
             : { text: 'STARTER TEMPLATE · NOT SAVED', color: 'var(--primary)' };
 
-    function renderSection(sec: Section, title: string, addLabel: string, rows: Row[], options: Category[], find: (id: string) => Category, total: number, color: string) {
+    function renderCategoryPill(sec: Section, r: Row, options: Category[], find: (id: string) => Category) {
+        const c = find(r.category);
+        const open = openDrop === r.id;
         return (
-            <section className={styles.section}>
-                <div className={styles.sectionHead}>
-                    <span className={styles.sectionTitle}>{title} <span className={styles.dimText}>· {rows.length} ROWS</span></span>
-                    <span className="num" style={{ color }}>{fmt(total)}</span>
-                </div>
-                {rows.map(r => {
-                    const c = find(r.category);
-                    const open = openDrop === r.id;
-                    return (
-                        <div key={r.id} className={styles.row}>
-                            <button className={cx(styles.pill, open && styles.pillOpen)} onClick={() => setOpenDrop(open ? null : r.id)}>
-                                <span className={styles.swatch} style={{ background: c.color }} />
-                                {c.code}
-                                <span className={styles.pillCaret} aria-hidden="true" />
-                            </button>
-                            <input
-                                className={styles.labelInput}
-                                placeholder="Label"
-                                value={r.label}
-                                onChange={e => edit(sec, r.id, { label: e.target.value })}
-                            />
-                            <span className={styles.amountCell}>
-                                $
-                                <input
-                                    className={cx(styles.amountInput, !parseFloat(r.amount) && styles.amountZero)}
-                                    inputMode="decimal"
-                                    placeholder="0.00"
-                                    value={r.amount}
-                                    onChange={e => edit(sec, r.id, { amount: e.target.value.replace(/[^0-9.]/g, '') })}
-                                    onBlur={() => setter(sec)(list => list.map(x => x.id === r.id ? { ...x, amount: (parseFloat(x.amount) || 0).toFixed(2) } : x))}
-                                />
-                            </span>
-                            <button className={styles.removeBtn} onClick={() => removeRow(sec, r.id)} aria-label="Remove row">✕</button>
-                            {open && (
-                                <>
-                                    <div className={styles.dropOverlay} onClick={() => setOpenDrop(null)} />
-                                    <div className={styles.drop}>
-                                        {options.map(o => (
-                                            <button
-                                                key={o.id}
-                                                className={cx(styles.dropOption, o.id === r.category && styles.dropOptionActive)}
-                                                onClick={() => { edit(sec, r.id, { category: o.id }); setOpenDrop(null); }}
-                                            >
-                                                <span className={styles.swatch} style={{ background: o.color }} />
-                                                <span className={styles.dropCode}>{o.code}</span>
-                                                {o.id}
-                                                <span className={styles.dropCheck}>{o.id === r.category ? '✓' : ''}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
+            <>
+                <button className={cx(styles.pill, open && styles.pillOpen)} onClick={() => setOpenDrop(open ? null : r.id)} aria-label={`Category: ${c.id}`}>
+                    <span className={styles.swatch} style={{ background: c.color }} />
+                    {c.code}
+                    <span className={styles.pillCaret} aria-hidden="true" />
+                </button>
+                {open && (
+                    <>
+                        <div className={styles.dropOverlay} onClick={() => setOpenDrop(null)} />
+                        <div className={styles.drop}>
+                            {options.map(o => (
+                                <button
+                                    key={o.id}
+                                    className={cx(styles.dropOption, o.id === r.category && styles.dropOptionActive)}
+                                    onClick={() => { edit(sec, r.id, { category: o.id }); setOpenDrop(null); }}
+                                >
+                                    <span className={styles.swatch} style={{ background: o.color }} />
+                                    <span className={styles.dropCode}>{o.code}</span>
+                                    {o.id}
+                                    <span className={styles.dropCheck}>{o.id === r.category ? '✓' : ''}</span>
+                                </button>
+                            ))}
                         </div>
-                    );
-                })}
-                <button className={styles.addRowBtn} onClick={() => addRow(sec)}>+ ADD {addLabel} ROW</button>
-            </section>
+                    </>
+                )}
+            </>
+        );
+    }
+
+    function renderAmount(sec: Section, r: Row) {
+        return (
+            <span className={styles.amountCell}>
+                $
+                <input
+                    className={cx(styles.amountInput, !parseFloat(r.amount) && styles.amountZero)}
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    aria-label={`${r.label || 'Row'} amount`}
+                    value={r.amount}
+                    onChange={e => edit(sec, r.id, { amount: e.target.value.replace(/[^0-9.]/g, '') })}
+                    onBlur={() => setter(sec)(list => list.map(x => x.id === r.id ? { ...x, amount: (parseFloat(x.amount) || 0).toFixed(2) } : x))}
+                />
+            </span>
+        );
+    }
+
+    function renderLabel(sec: Section, r: Row) {
+        return (
+            <input
+                className={styles.labelInput}
+                placeholder="Label"
+                value={r.label}
+                onChange={e => edit(sec, r.id, { label: e.target.value })}
+            />
         );
     }
 
@@ -320,7 +411,7 @@ export default function MonthlyBudgetPage() {
                         <span className={cx(styles.sumValue, 'num')} style={{ color: 'var(--expense)' }}>{fmt(totalExpenses)}</span>
                     </div>
                     <div className={styles.sumCell}>
-                        <span className={styles.sumLabel}>NET SAVINGS</span>
+                        <span className={styles.sumLabel}>NET{rate !== null && ` · ${rate}%`}</span>
                         <span
                             className={cx(styles.sumValue, 'num')}
                             style={{ color: net < 0 ? 'var(--neg)' : net > 0 ? 'var(--pos)' : 'var(--muted)' }}
@@ -328,40 +419,161 @@ export default function MonthlyBudgetPage() {
                             {fmtSigned(net)}
                         </span>
                     </div>
-                    <div className={cx(styles.sumCell, styles.rateCell)}>
-                        <span className={styles.sumLabel}>SAVINGS RATE · {rate === null ? '—' : `${rate}%`}</span>
-                        <SegmentBar rate={rate} />
+                    <div className={cx(styles.sumCell, styles.sumWide)} data-testid="sum-left">
+                        <span className={styles.sumLabel}>
+                            LEFT TO SPEND{progress?.dailyAllowance != null && ` · ${fmt(progress.dailyAllowance)}/DAY`}
+                        </span>
+                        <span className={cx(styles.sumValue, 'num')} style={{ color: progress && progress.left < 0 ? 'var(--neg)' : undefined }}>
+                            {progress ? fmt(progress.left) : <span className={styles.dimText}>NO LIMITS</span>}
+                        </span>
+                    </div>
+                    <div className={cx(styles.sumCell, styles.sumWide)} data-testid="sum-bills">
+                        <span className={styles.sumLabel}>BILLS LEFT TO PAY</span>
+                        <span className={cx(styles.sumValue, 'num')} style={{ color: bills.leftToPay > 0 ? 'var(--neg)' : 'var(--pos)' }}>
+                            {fmt(bills.leftToPay)}
+                        </span>
                     </div>
                 </div>
             </div>
 
             <div className={cx(styles.body, loading && styles.dim)}>
                 <div className={styles.sections}>
-                    {renderSection('income', 'INCOME', 'INCOME', income, INCOME_CATEGORIES, incomeCategory, totalIncome, 'var(--income)')}
-                    {renderSection('fixed', 'FIXED EXPENSES', 'FIXED', fixed, FIXED_CATEGORIES, fixedCategory, totalFixed, 'var(--expense)')}
+                    <section className={styles.section}>
+                        <div className={styles.sectionHead}>
+                            <span className={styles.sectionTitle}>INCOME <span className={styles.dimText}>· {income.length} ROWS</span></span>
+                            <span className="num" style={{ color: 'var(--income)' }}>{fmt(totalIncome)}</span>
+                        </div>
+                        {income.map(r => (
+                            <div key={r.id} className={styles.row}>
+                                {renderCategoryPill('income', r, INCOME_CATEGORIES, incomeCategory)}
+                                {renderLabel('income', r)}
+                                {renderAmount('income', r)}
+                                <button className={styles.removeBtn} onClick={() => removeRow('income', r.id)} aria-label="Remove row">✕</button>
+                            </div>
+                        ))}
+                        <button className={styles.addRowBtn} onClick={() => addRow('income')}>+ ADD INCOME ROW</button>
+                    </section>
+
+                    <section className={styles.section} aria-label="Fixed and bills">
+                        <div className={styles.sectionHead}>
+                            <span className={styles.sectionTitle}>FIXED &amp; BILLS <span className={styles.dimText}>· {fixed.length} ROWS</span></span>
+                            <span className="num" style={{ color: 'var(--expense)' }}>{fmt(totalFixed)}</span>
+                        </div>
+                        <div className={cx(styles.fixedRow, styles.colHead)} aria-hidden="true">
+                            <span>CAT</span><span>LABEL</span><span className={styles.center}>DUE</span>
+                            <span className={styles.right}>AMOUNT</span><span className={styles.center}>PAID</span><span />
+                        </div>
+                        {fixed.map(r => {
+                            const state = billState(r);
+                            return (
+                                <div key={r.id} className={cx(styles.row, styles.fixedRow, state === 'overdue' && styles.overdueRow)} data-testid="fixed-row">
+                                    {renderCategoryPill('fixed', r, FIXED_CATEGORIES, fixedCategory)}
+                                    {renderLabel('fixed', r)}
+                                    <input
+                                        className={cx(styles.dueInput, state && styles.dueAlert, r.paid && styles.duePaid)}
+                                        inputMode="numeric"
+                                        maxLength={2}
+                                        placeholder="–"
+                                        aria-label={`${r.label || 'Row'} due day`}
+                                        title="Day of the month it's due (1–31)"
+                                        value={r.dueDay}
+                                        onChange={e => edit('fixed', r.id, { dueDay: e.target.value.replace(/\D/g, '') })}
+                                        onBlur={() => setFixed(list => list.map(x => {
+                                            if (x.id !== r.id || !x.dueDay) return x;
+                                            const d = Number(x.dueDay);
+                                            return { ...x, dueDay: d >= 1 ? String(Math.min(31, d)) : '' };
+                                        }))}
+                                    />
+                                    {renderAmount('fixed', r)}
+                                    <span className={styles.paidCell}>
+                                        <input
+                                            type="checkbox"
+                                            className={cx(styles.paidBox, state === 'overdue' && styles.paidBoxAlert)}
+                                            checked={r.paid}
+                                            onChange={() => togglePaid(r)}
+                                            aria-label={`${r.label || 'Bill'} paid`}
+                                        />
+                                    </span>
+                                    <button className={styles.removeBtn} onClick={() => removeRow('fixed', r.id)} aria-label="Remove row">✕</button>
+                                </div>
+                            );
+                        })}
+                        <button className={styles.addRowBtn} onClick={() => addRow('fixed')}>+ ADD FIXED ROW</button>
+                        <div className={styles.billsFoot} data-testid="bills-foot">
+                            <span>LEFT TO PAY <b className="num">{fmt(bills.leftToPay)}</b></span>
+                            <span>PAID <b className="num" style={{ color: 'var(--pos)' }}>{fmt(bills.paid)}</b></span>
+                            {bills.overdueCount > 0 && <span style={{ color: 'var(--neg)' }}>{bills.overdueCount} OVERDUE</span>}
+                        </div>
+                    </section>
                 </div>
 
-                <div className={styles.variable}>
+                <section className={styles.limits} aria-label="Category limits">
                     <div className={styles.sectionHead}>
                         <span className={styles.sectionTitle}>
-                            VARIABLE <span className={styles.dimText}>· AUTO-PULLED FROM DAILY LOG · READ-ONLY</span>
+                            CATEGORY LIMITS <span className={styles.dimText}>· SPENT IS PULLED FROM DAILY LOG</span>
                         </span>
-                        <span className="num" style={{ color: 'var(--expense)' }}>{fmt(totalVariable)}</span>
+                        <button className={styles.suggestBtn} onClick={suggest}>↺ SUGGEST FROM MY SPENDING</button>
                     </div>
-                    {variable.length === 0 ? (
-                        <div className={styles.varEmpty}>No daily log entries for this month yet.</div>
-                    ) : variable.map(v => (
-                        <div key={v.category} className={styles.varRow}>
-                            <CategoryTag category={dailyCategory(v.category)} />
-                            {v.category}
-                            <span className={cx(styles.varAmt, 'num')}>{fmt(v.total)}</span>
+                    {progress ? (
+                        <div className={styles.leftHead}>
+                            <div className={styles.leftLine}>
+                                <span className={cx(styles.leftBig, 'num')} style={{ color: progress.left < 0 ? 'var(--neg)' : undefined }}>
+                                    {progress.left < 0 ? `$${fmt(-progress.left)} over budget` : `$${fmt(progress.left)} left to spend`}
+                                </span>
+                                <span className={styles.leftMeta}>
+                                    {fmt(progress.spent)} SPENT OF {fmt(progress.totalLimit)}
+                                    {progress.dailyAllowance != null && progress.timing === 'current' && ` · $${fmt(progress.dailyAllowance)}/DAY FOR ${progress.daysLeft} ${progress.daysLeft === 1 ? 'DAY' : 'DAYS'}`}
+                                    {progress.unbudgetedSpent > 0 && ` · ${fmt(progress.unbudgetedSpent)} UNBUDGETED`}
+                                </span>
+                            </div>
+                            <SegmentBar
+                                segments={40}
+                                rate={progress.totalLimit > 0 ? Math.min(100, (progress.spent / progress.totalLimit) * 100) : 100}
+                                color={progress.left < 0 ? 'var(--neg)' : progress.spent >= progress.totalLimit * 0.8 ? 'var(--primary)' : 'var(--soft)'}
+                            />
                         </div>
-                    ))}
+                    ) : (
+                        <div className={styles.limitsEmpty}>
+                            Set a monthly limit for the categories you want to keep an eye on, and see what&apos;s left to spend each day.
+                        </div>
+                    )}
+                    {DAILY_CATEGORIES.map(c => {
+                        const p = byCategory.get(c.id) ?? null;
+                        const spent = spentByCategory[c.id] ?? 0;
+                        const avg = suggested[c.id];
+                        return (
+                            <div key={c.id} className={styles.limitRow} data-testid="limit-row">
+                                <span className={styles.limitName}><CategoryTag category={c} />{c.id}</span>
+                                <span className={cx(styles.amountCell, styles.limitInput)}>
+                                    $
+                                    <input
+                                        className={styles.amountInput}
+                                        inputMode="decimal"
+                                        placeholder={avg ? `avg ${Math.round(avg)}` : '–'}
+                                        aria-label={`${c.id} limit`}
+                                        value={limits[c.id] ?? ''}
+                                        onChange={e => editLimit(c.id, e.target.value.replace(/[^0-9.]/g, ''))}
+                                        onBlur={() => setLimits(l => l[c.id] ? { ...l, [c.id]: (parseFloat(l[c.id]) || 0).toFixed(2) } : l)}
+                                    />
+                                </span>
+                                <span className={styles.limitBar}><LimitBar progress={p} color={c.color} /></span>
+                                <span className={cx(styles.limitSpent, 'num')}>{spent ? fmt(spent) : '0'}</span>
+                                <span
+                                    className={cx(styles.limitStatus, 'num')}
+                                    style={{ color: p?.status === 'over' ? 'var(--neg)' : p?.status === 'warning' ? 'var(--primary)' : undefined }}
+                                >
+                                    {p ? (p.left < 0 ? `OVER BY ${fmt(-p.left)}` : `${fmt(p.left)} LEFT`) : spent ? 'NO LIMIT' : '–'}
+                                </span>
+                            </div>
+                        );
+                    })}
                     <div className={styles.totalRow}>
-                        <span className={styles.totalLabel}>TOTAL EXPENSES <span className={styles.dimText}>· FIXED + DAILY</span></span>
+                        <span className={styles.totalLabel}>
+                            TOTAL EXPENSES <span className={styles.dimText}>· FIXED {fmt(totalFixed)} + DAILY {fmt(totalVariable)}</span>
+                        </span>
                         <span className="num" style={{ color: 'var(--expense)' }}>{fmt(totalExpenses)}</span>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     );

@@ -6,15 +6,21 @@ type Props = {
     /** Tint the empty segments red (spent more than earned) */
     negative?: boolean;
     segments?: number;
+    /** Colour of the filled blocks (default: the positive green) */
+    color?: string;
 };
 
-/** Savings-rate meter: 20 blocks, each worth 5% */
-export default function SegmentBar({ rate, negative = false, segments = 20 }: Props) {
+/** Block meter: savings rate (20 blocks of 5%) or share of a budget spent */
+export default function SegmentBar({ rate, negative = false, segments = 20, color }: Props) {
     const filled = rate === null ? 0 : Math.round(rate / (100 / segments));
     return (
         <div className={styles.bar} style={{ gridTemplateColumns: `repeat(${segments}, 1fr)` }} aria-hidden="true">
             {Array.from({ length: segments }, (_, i) => (
-                <span key={i} className={i < filled ? styles.on : negative ? styles.neg : styles.off} />
+                <span
+                    key={i}
+                    className={i < filled ? styles.on : negative ? styles.neg : styles.off}
+                    style={i < filled && color ? { background: color } : undefined}
+                />
             ))}
         </div>
     );
