@@ -8,9 +8,10 @@ describe('amount encryption', () => {
     });
 
     it('stores ciphertext, not the number, and a fresh IV each time', () => {
-        const a = encryptAmount(42);
-        const b = encryptAmount(42);
-        expect(a).not.toContain('42');
+        // A distinctive amount: random hex can't contain a "." so the plain value can't show up by chance
+        const a = encryptAmount(1234.56);
+        const b = encryptAmount(1234.56);
+        expect(a).not.toContain('1234.56');
         expect(a).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
         expect(a).not.toBe(b);
     });

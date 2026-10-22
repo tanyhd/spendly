@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { parseYearMonth } from '@/lib/period';
 import { getMonthVariableTotals } from '@/services/summaries';
 
 async function getAuth(req: NextRequest) {
@@ -15,7 +16,9 @@ export async function GET(
     const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { year: y, month: m } = await context.params;
-    const result = await getMonthVariableTotals(auth.userId, parseInt(y), parseInt(m));
+    const ym = parseYearMonth(await context.params);
+    if (!ym) return NextResponse.json({ message: 'Invalid month' }, { status: 400 });
+
+    const result = await getMonthVariableTotals(auth.userId, ym.year, ym.month);
     return NextResponse.json(result);
 }

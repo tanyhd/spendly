@@ -174,6 +174,7 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
                         <input
                             className={styles.noteInput}
                             placeholder="e.g. Lunch"
+                            maxLength={200} // the server's limit (MAX_NOTE in services/entries)
                             value={note}
                             onChange={e => setNote(e.target.value)}
                         />

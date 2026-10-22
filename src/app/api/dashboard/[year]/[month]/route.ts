@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import { parseYearMonth } from '@/lib/period';
 import { getDashboardData } from '@/services/summaries';
 
 async function getAuth(req: NextRequest) {
@@ -15,7 +16,9 @@ export async function GET(
     const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { year: y, month: m } = await context.params;
-    const data = await getDashboardData(auth.userId, parseInt(y), parseInt(m));
+    const ym = parseYearMonth(await context.params);
+    if (!ym) return NextResponse.json({ message: 'Invalid month' }, { status: 400 });
+
+    const data = await getDashboardData(auth.userId, ym.year, ym.month);
     return NextResponse.json(data);
 }

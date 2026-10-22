@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import { encryptAmount } from '@/lib/crypto';
-import { updateEntry, deleteEntry } from '@/services/entries';
+import { updateEntry, deleteEntry, parseEntryInput, parseEntryId } from '@/services/entries';
 
 async function getAuth(req: NextRequest) {
     const token = req.cookies.get('token')?.value;
@@ -9,6 +9,9 @@ async function getAuth(req: NextRequest) {
     try { return await verifyToken(token); } catch { return null; }
 }
 
+const notFound = () => NextResponse.json({ message: 'Entry not found' }, { status: 404 });
+
+/** Edits category, amount and/or note; the date stays */
 export async function PUT(
     req: NextRequest,
     context: { params: Promise<{ id: string }> }
@@ -16,15 +19,19 @@ export async function PUT(
     const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { id } = await context.params;
-    const { category, amount, note } = await req.json();
+    const id = parseEntryId((await context.params).id);
+    if (!id) return notFound();
 
-    const patch: Record<string, string> = {};
-    if (category !== undefined) patch.category = category;
-    if (amount !== undefined) patch.amount = encryptAmount(parseFloat(amount) || 0);
-    if (note !== undefined) patch.note = note;
+    const parsed = parseEntryInput(await req.json().catch(() => null), true);
+    if (!parsed.ok) return NextResponse.json({ message: parsed.error }, { status: 400 });
 
-    await updateEntry(auth.userId, id, patch);
+    const { category, amount, note } = parsed.value;
+    const result = await updateEntry(auth.userId, id, {
+        ...(category !== undefined && { category }),
+        ...(amount !== undefined && { amount: encryptAmount(amount) }),
+        ...(note !== undefined && { note }),
+    });
+    if (result.matchedCount === 0) return notFound();
     return NextResponse.json({ success: true });
 }
 
@@ -35,7 +42,10 @@ export async function DELETE(
     const auth = await getAuth(req);
     if (!auth) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { id } = await context.params;
-    await deleteEntry(auth.userId, id);
+    const id = parseEntryId((await context.params).id);
+    if (!id) return notFound();
+
+    const result = await deleteEntry(auth.userId, id);
+    if (result.deletedCount === 0) return notFound();
     return NextResponse.json({ success: true });
 }
