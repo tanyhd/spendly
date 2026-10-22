@@ -41,8 +41,27 @@ jobs:
           JWT_SECRET: ci-only-jwt-secret
           ENCRYPTION_KEY: '00000000000000000000000000000000000000000000000000000000000000c1'
 
+      # The browser download is cached per Playwright version. The Linux libraries it needs
+      # can't be cached, so a cache hit still installs those (install-deps).
+      # Headless only in CI, so only the smaller headless shell is downloaded.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Install Playwright system libraries
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       - name: End-to-end tests
         run: npm run test:e2e
