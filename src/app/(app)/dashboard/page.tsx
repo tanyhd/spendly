@@ -256,7 +256,11 @@ export default function DashboardPage() {
                                 </>
                             )}
                             {fixedBars.length === 0 && totalExpenses > 0 && (
-                                <span className={styles.empty}>No fixed expenses — this month&apos;s budget isn&apos;t saved.</span>
+                                <span className={styles.empty}>
+                                    {budgetSaved
+                                        ? 'No fixed expenses in this month’s budget.'
+                                        : 'No fixed expenses — this month’s budget isn’t saved.'}
+                                </span>
                             )}
                             {totalExpenses === 0 && <span className={styles.noExpenses}>No expenses this month</span>}
                         </div>
