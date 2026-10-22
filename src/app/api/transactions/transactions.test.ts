@@ -11,7 +11,7 @@ const add = (user: TestUser, date: number, category: string, amount: number, not
     createEntry(user.userId, { date, category, amount: encryptAmount(amount), note });
 
 type Item = { _id: string; date: number; category: string; amount: number; note: string };
-type Page = { items: Item[]; nextCursor: string | null; total: { count: number; amount: number } };
+type Page = { items: Item[]; nextCursor: string | null; total: { count: number; amount: number }; dayTotals: Record<number, number> };
 
 const get = async (user: TestUser | undefined, query = '') => list(req(`/api/transactions${query}`, { user }));
 const page = async (user: TestUser, query = ''): Promise<Page> => (await get(user, query)).json();
@@ -69,6 +69,13 @@ describe('GET /api/transactions', () => {
         } while (cursor);
         expect(pages).toBe(3);
         expect(new Set(seen).size).toBe(5);
+    });
+
+    it('day totals cover the whole day, even when it is split across pages', async () => {
+        const p1 = await page(alex, '?limit=2');   // Oct 22, then the first of Oct 10's two entries
+        expect(p1.items.map(i => i.date)).toEqual([20261022, 20261010]);
+        expect(p1.dayTotals).toEqual({ 20261022: 8, 20261010: 120 });
+        expect((await page(alex, '?limit=2&q=shoes')).dayTotals).toEqual({ 20261010: 80 }); // within the filter
     });
 
     it('paging stays right when an entry is added and one deleted mid-way', async () => {

@@ -67,6 +67,17 @@ describe('upcomingBills', () => {
         expect(r.unpaid).toEqual({ count: 0, amount: 0 });
     });
 
+    it('lists unpaid bills after the window as coming later, through next month', () => {
+        const r = upcomingBills([oct, nov], 20261022, 7);
+        expect(r.later.map(i => [i.label, i.dueDate])).toEqual([['Water', 20261029], ['Rent', 20261101], ['Phone', 20261115]]);
+    });
+
+    it('counts days overdue', () => {
+        const r = upcomingBills([oct], 20261022, 7);
+        expect(r.items.map(i => [i.label, i.daysOverdue])).toEqual([['Phone', 7], ['Gym', 0], ['Card', 0]]);
+        expect(upcomingBills([{ ...oct, bills: [bill('Gym', 60, 28)] }, { year: 2026, month: 11, planSaved: true, bills: [] }], 20261101, 7).items).toEqual([]); // last month: not overdue
+    });
+
     it('a clamped due day lands in the window (31 → Feb 28)', () => {
         const feb = { year: 2026, month: 2, planSaved: true, bills: [bill('Rent', 1000, 31)] };
         expect(upcomingBills([feb], 20260225, 7).items[0].dueDate).toBe(20260228);

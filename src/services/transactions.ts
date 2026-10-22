@@ -18,6 +18,8 @@ export type TransactionPage = {
     nextCursor: string | null;
     /** For the whole filter, not just this page */
     total: { count: number; amount: number };
+    /** YYYYMMDD → total, for each day on this page (the whole day within the filter) */
+    dayTotals: Record<number, number>;
 };
 
 const MAX_Q = 100;
@@ -100,16 +102,30 @@ export async function listTransactions(
         ? { $and: [base, { $or: [{ date: { $lt: cursor.date } }, { date: cursor.date, _id: { $lt: cursor.id } }] }] }
         : base;
 
-    const [docs, amounts] = await Promise.all([
+    const [docs, all] = await Promise.all([
         entries.find(paged).sort({ date: -1, _id: -1 }).limit(limit + 1).toArray(),
-        entries.find(base, { projection: { amount: 1 } }).toArray(),
+        entries.find(base, { projection: { amount: 1, date: 1 } }).toArray(),
     ]);
     const page = docs.slice(0, limit);
-    const amount = Math.round(amounts.reduce((s, e) => s + decryptAmount(e.amount), 0) * 100) / 100;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+
+    // Day totals for the days on this page, over the whole filter, so a day split across two
+    // pages still shows its full total in its header
+    const pageDays = new Set(page.map(e => e.date));
+    const dayTotals: Record<number, number> = {};
+    let amount = 0;
+    for (const e of all) {
+        const a = decryptAmount(e.amount);
+        amount += a;
+        if (pageDays.has(e.date)) dayTotals[e.date] = (dayTotals[e.date] ?? 0) + a;
+    }
+    for (const d of Object.keys(dayTotals)) dayTotals[Number(d)] = r2(dayTotals[Number(d)]);
+
     return {
         items: page.map(toEntry),
         nextCursor: docs.length > limit ? encodeCursor(page[page.length - 1]) : null,
-        total: { count: amounts.length, amount },
+        total: { count: all.length, amount: r2(amount) },
+        dayTotals,
     };
 }
 

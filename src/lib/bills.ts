@@ -1,5 +1,5 @@
 // Bills are the fixed expenses on the Budget page. Pure, so it can be tested for any date.
-import { addDaysInt } from './format';
+import { addDaysInt, fromDateInt } from './format';
 
 export type Bill = { id: string; label: string; category: string; amount: number; dueDay: number | null; paid: boolean };
 
@@ -13,6 +13,8 @@ export type UpcomingBill = {
     dueDate: number;
     paid: boolean;
     status: BillStatus;
+    /** Days past the due date; 0 unless overdue */
+    daysOverdue: number;
     year: number;
     month: number;
     /** false when the month's plan is only a copy of last month (ticking paid needs it saved first) */
@@ -27,6 +29,10 @@ const cents = (n: number) => Math.round(n * 100) / 100;
 export function dueDate(year: number, month: number, dueDay: number) {
     const last = new Date(year, month, 0).getDate();
     return year * 10000 + month * 100 + Math.min(dueDay, last);
+}
+
+function daysBetween(from: number, to: number) {
+    return Math.round((fromDateInt(to).getTime() - fromDateInt(from).getTime()) / 86_400_000);
 }
 
 /** Overdue = due date passed and not paid; a paid bill is never overdue */
@@ -53,12 +59,14 @@ export type MonthBills = { year: number; month: number; bills: Bill[]; planSaved
 
 /**
  * Bills due from today through the next `days` days (today included), plus this month's overdue
- * ones, soonest first. Bills without a due day are left out.
+ * ones, soonest first. `later` holds the unpaid bills after that, up to the end of the last month
+ * given (the dashboard's "Coming later"). Bills without a due day are left out.
  */
 export function upcomingBills(months: MonthBills[], today: number, days: number) {
     const end = addDaysInt(today, days - 1);
     const thisMonthKey = Math.floor(today / 100);
     const items: UpcomingBill[] = [];
+    const later: UpcomingBill[] = [];
     for (const { year, month, bills, planSaved } of months) {
         for (const b of bills) {
             if (b.dueDay == null) continue;
@@ -66,18 +74,23 @@ export function upcomingBills(months: MonthBills[], today: number, days: number)
             const status = billStatus(due, b.paid, today);
             const inWindow = due >= today && due <= end;
             const overdueNow = status === 'overdue' && year * 100 + month === thisMonthKey;
-            if (!inWindow && !overdueNow) continue;
-            items.push({
+            const item: UpcomingBill = {
                 rowId: b.id, label: b.label, category: b.category, amount: b.amount,
                 dueDate: due, paid: b.paid, status, year, month, planSaved,
-            });
+                daysOverdue: status === 'overdue' ? daysBetween(due, today) : 0,
+            };
+            if (inWindow || overdueNow) items.push(item);
+            else if (due > end && !b.paid) later.push(item);
         }
     }
-    items.sort((a, b) => a.dueDate - b.dueDate || a.label.localeCompare(b.label));
+    const soonest = (a: UpcomingBill, b: UpcomingBill) => a.dueDate - b.dueDate || a.label.localeCompare(b.label);
+    items.sort(soonest);
+    later.sort(soonest);
     const unpaid = items.filter(i => !i.paid);
     return {
         range: { start: today, end },
         items,
+        later,
         unpaid: { count: unpaid.length, amount: cents(unpaid.reduce((s, i) => s + i.amount, 0)) },
     };
 }

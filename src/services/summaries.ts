@@ -109,6 +109,8 @@ export type SummaryBar = {
     /** Monthly figures, so only on month bars (quarter and year views); null on day bars */
     income: number | null;
     fixed: number | null;
+    /** Month bars: the month has a saved plan (an unbudgeted month draws as an empty bar); null on day bars */
+    budgeted: boolean | null;
 };
 
 export type SummaryCategory = {
@@ -132,9 +134,13 @@ export type Summary = {
     daily: number;
     net: number | null;
     savingsRate: number | null;
+    /** "1 of 3 months budgeted"; null for a week */
+    months: { budgeted: number; total: number } | null;
     bars: SummaryBar[];
     byCategory: SummaryCategory[];
     pace: { spentSoFar: number; prevSameDay: number } | null;
+    /** This month's category limits vs this month's spending, for the current week or month; else null */
+    budgets: BudgetProgress | null;
     insights: Insight[];
 };
 
@@ -168,6 +174,7 @@ export async function getSummary(userId: string, period: Period, anchor: number,
     const spent = entries.map(e => ({ date: e.date, category: e.category, amount: decryptAmount(e.amount) }));
     const sumIn = (s: number, e: number) => r2(spent.filter(x => x.date >= s && x.date <= e).reduce((t, x) => t + x.amount, 0));
     const planTotals = new Map(plans.map(p => [p.year * 100 + p.month, {
+        budgeted: p.plan != null,
         income: decryptRows(p.plan?.income).reduce((t, r) => t + r.amount, 0),
         fixed: decryptRows(p.plan?.fixedExpenses).reduce((t, r) => t + r.amount, 0),
     }]));
@@ -179,8 +186,10 @@ export async function getSummary(userId: string, period: Period, anchor: number,
             daily: sumIn(b.start, b.end),
             income: month ? r2(month.income) : null,
             fixed: month ? r2(month.fixed) : null,
+            budgeted: month ? month.budgeted : null,
         };
     });
+    const months = isWeek ? null : { budgeted: plans.filter(p => p.plan != null).length, total: plans.length };
 
     const daily = sumIn(range.start, range.end);
     const income = isWeek ? null : r2([...planTotals.values()].reduce((t, p) => t + p.income, 0));
@@ -203,30 +212,36 @@ export async function getSummary(userId: string, period: Period, anchor: number,
     const prevTotal = r2(Object.values(before).reduce((t, v) => t + v, 0));
     const pace = timing === 'current' && compareRange ? { spentSoFar: daily, prevSameDay: prevTotal } : null;
 
-    // Category limits and bills belong to a month: shown for the month view of that month
+    // Category limits and bills belong to this month: shown while viewing the current week or month
+    // (limits) or any current period (bills). Limits compare with the whole month's spending.
     let budgets: BudgetProgress | null = null;
     let bills: InsightInput['bills'] = null;
     if (timing === 'current') {
         const y = Math.floor(today / 10000), m = Math.floor(today / 100) % 100;
-        const [plan, upcoming] = await Promise.all([
-            period === 'month' ? getBudget(userId, y, m) : Promise.resolve(null),
+        const withLimits = period === 'week' || period === 'month';
+        const [plan, monthTotals, upcoming] = await Promise.all([
+            withLimits ? getBudget(userId, y, m) : Promise.resolve(null),
+            period === 'week' ? getMonthVariableTotals(userId, y, m) : Promise.resolve(null),
             getUpcomingBills(userId, 7, today),
         ]);
         const limits = decryptLimits(plan?.categoryBudgets).map(l => ({ category: l.category, amount: l.amount }));
-        if (limits.length) budgets = budgetProgress(limits, now, y, m, today);
+        if (limits.length) {
+            const monthSpent = monthTotals ? Object.fromEntries(monthTotals.map(c => [c.category, c.total])) : now;
+            budgets = budgetProgress(limits, monthSpent, y, m, today);
+        }
         const unpaid = upcoming.items.filter(i => !i.paid);
-        const overdue = unpaid.filter(i => i.status === 'overdue');
         const soon = unpaid.filter(i => i.status !== 'overdue');
         bills = {
-            overdueCount: overdue.length, overdueAmount: r2(overdue.reduce((t, i) => t + i.amount, 0)),
-            dueSoonCount: soon.length, dueSoonAmount: r2(soon.reduce((t, i) => t + i.amount, 0)),
+            overdue: unpaid.filter(i => i.status === 'overdue').map(i => ({ label: i.label, amount: i.amount, daysOverdue: i.daysOverdue })),
+            dueSoonCount: soon.length,
+            dueSoonAmount: r2(soon.reduce((t, i) => t + i.amount, 0)),
             days: 7,
         };
     }
 
     return {
         period, label: periodLabel(period, anchor), range, compareRange, timing,
-        income, fixed, daily, net, savingsRate, bars, byCategory, pace,
+        income, fixed, daily, net, savingsRate, months, bars, byCategory, pace, budgets,
         insights: buildInsights({ period, isCurrent: timing === 'current', budgets, byCategory, pace, bills }),
     };
 }

@@ -44,7 +44,7 @@ describe('month summary', () => {
             income: 5000, fixed: 2000, daily: 1179, net: 1821, savingsRate: 0.364,
         });
         expect(s.bars).toHaveLength(31);
-        expect(s.bars[4]).toEqual({ label: '5', start: 20261005, end: 20261005, daily: 100, income: null, fixed: null });
+        expect(s.bars[4]).toEqual({ label: '5', start: 20261005, end: 20261005, daily: 100, income: null, fixed: null, budgeted: null });
     });
 
     it('compares with the same point last month (Sept 1–22), not all of September', async () => {
@@ -68,17 +68,20 @@ describe('month summary', () => {
 
     it('builds insights: the change, overdue bills, the pace', async () => {
         const s = await getSummary(alex.userId, 'month', TODAY, TODAY);
-        expect(s.insights.map(i => i.kind)).toEqual(['change', 'bills', 'pace']);
-        expect(s.insights[1].text).toBe('1 bill overdue · $2,000.00.');
+        expect(s.insights.map(i => i.text)).toEqual([
+            "Rent ($2,000.00) is 21 days overdue. Tick it once it's paid.",
+            "You've spent $1,179.00 so far, $979.00 more than this point last month.",
+            'Food is up 475% ($949.00) vs last month.',
+        ]);
 
         await setBillPaid(alex.userId, 2026, 10, 'rent', true);
-        expect((await getSummary(alex.userId, 'month', TODAY, TODAY)).insights.map(i => i.kind)).toEqual(['change', 'pace']);
+        expect((await getSummary(alex.userId, 'month', TODAY, TODAY)).insights.map(i => i.kind)).toEqual(['pace', 'change']);
     });
 
     it('category budgets show up in the month view', async () => {
         await plan(alex, 2026, 10, { categoryBudgets: [{ category: 'Food', amount: 1000 }] });
         const s = await getSummary(alex.userId, 'month', TODAY, TODAY);
-        expect(s.insights[0]).toMatchObject({ kind: 'budget', text: 'Food is $149.00 over its $1,000.00 budget.' });
+        expect(s.insights[0]).toMatchObject({ kind: 'budget', text: 'Food is $149.00 over budget with 10 days left.' });
     });
 });
 
@@ -98,6 +101,18 @@ describe('week summary', () => {
         });
         expect(s.bars.map(b => [b.label, b.daily])).toEqual([['MON', 10], ['TUE', 0], ['WED', 0], ['THU', 5], ['FRI', 0], ['SAT', 0], ['SUN', 0]]);
         expect(s.bars.every(b => b.income === null)).toBe(true);
+        expect(s.months).toBeNull();
+    });
+
+    it("shows this month's limits against the whole month's spending, not just the week's", async () => {
+        const alex = await makeUser('Alex');
+        await plan(alex, 2026, 10, { categoryBudgets: [{ category: 'Food', amount: 100 }] });
+        await spend(alex, 20261005, 'Food', 90);   // earlier this month
+        await spend(alex, 20261020, 'Food', 5);    // this week
+        const s = await getSummary(alex.userId, 'week', TODAY, TODAY);
+        expect(s.budgets).toMatchObject({ totalLimit: 100, spent: 95, left: 5 });
+        expect(s.insights[0].text).toBe('Food has $5.00 of its $100.00 budget left with 10 days left.');
+        expect((await getSummary(alex.userId, 'week', 20261008, TODAY)).budgets).toBeNull(); // a past week
     });
 });
 
@@ -109,11 +124,11 @@ describe('quarter and year summaries', () => {
         await spend(alex, 20261105, 'Shopping', 300);
 
         const q = await getSummary(alex.userId, 'quarter', TODAY, TODAY);
-        expect(q).toMatchObject({ label: 'Q4 2026', income: 10000, fixed: 4000, daily: 300, net: 5700 });
+        expect(q).toMatchObject({ label: 'Q4 2026', income: 10000, fixed: 4000, daily: 300, net: 5700, months: { budgeted: 2, total: 3 }, budgets: null });
         expect(q.bars).toEqual([
-            { label: 'OCT', start: 20261001, end: 20261031, daily: 0, income: 5000, fixed: 2000 },
-            { label: 'NOV', start: 20261101, end: 20261130, daily: 300, income: 5000, fixed: 2000 },
-            { label: 'DEC', start: 20261201, end: 20261231, daily: 0, income: 0, fixed: 0 },
+            { label: 'OCT', start: 20261001, end: 20261031, daily: 0, income: 5000, fixed: 2000, budgeted: true },
+            { label: 'NOV', start: 20261101, end: 20261130, daily: 300, income: 5000, fixed: 2000, budgeted: true },
+            { label: 'DEC', start: 20261201, end: 20261231, daily: 0, income: 0, fixed: 0, budgeted: false },
         ]);
 
         const y = await getSummary(alex.userId, 'year', TODAY, TODAY);
