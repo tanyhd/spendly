@@ -330,7 +330,7 @@ export default function SettingsPage() {
                         <div className={styles.preview}>
                             <span className={styles.previewLabel}>WHAT GETS DELETED</span>
                             <span className={cx(weekEmpty && styles.previewDim)}>
-                                {weekPreview ? `${plural(weekPreview.entries, 'daily entry', 'daily entries')} · ${fmt(weekPreview.total)}` : '…'}
+                                {weekPreview ? `${plural(weekPreview.entries, 'daily entry', 'daily entries')} · $${fmt(weekPreview.total)}` : '…'}
                             </span>
                             <span className={styles.previewDim}>Budgets are not touched</span>
                         </div>
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                         <div className={styles.preview}>
                             <span className={styles.previewLabel}>WHAT GETS DELETED</span>
                             <span className={cx(!monthPreview?.entries && styles.previewDim)}>
-                                {monthPreview ? `${plural(monthPreview.entries, 'daily entry', 'daily entries')} · ${fmt(monthPreview.total)}` : '…'}
+                                {monthPreview ? `${plural(monthPreview.entries, 'daily entry', 'daily entries')} · $${fmt(monthPreview.total)}` : '…'}
                             </span>
                             <span className={cx(!monthPreview?.budgets && styles.previewDim)}>
                                 {monthPreview?.budgets ? `+ the saved ${monthLabel} budget (income & fixed rows)` : `No saved budget for ${monthLabel}`}
