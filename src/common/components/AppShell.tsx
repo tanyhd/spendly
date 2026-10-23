@@ -78,7 +78,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
             {/* Phone title bar */}
             <header className={cx(styles.bar, styles.phoneOnly)}>
-                <div className={styles.phoneTitle}><span className={styles.mark} />{current?.label ?? 'SPENDLY'}</div>
+                <div className={styles.phoneTitle}><span className={styles.mark} />{pathname === '/daily-log/all' ? 'ALL EXPENSES' : current?.label ?? 'SPENDLY'}</div>
                 <button
                     className={cx(styles.avatar, styles.avatarPhone, menuOpen && styles.avatarOpen)}
                     onClick={() => setMenuOpen(!menuOpen)}

@@ -1,0 +1,447 @@
+.page {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Search + export */
+.searchRow {
+    display: flex;
+    align-items: stretch;
+    min-height: 52px;
+    border-bottom: 1px solid var(--line);
+}
+
+.search {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding-left: 20px;
+}
+
+.slash {
+    color: var(--dim);
+}
+
+.searchInput {
+    flex: 1;
+    min-width: 0;
+    align-self: stretch;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+}
+
+.searchInput::placeholder {
+    color: var(--dim);
+}
+
+.clearQ {
+    align-self: stretch;
+    padding: 0 18px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+}
+
+.clearQ:hover {
+    color: var(--text);
+}
+
+.exportBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 20px;
+    border-left: 1px solid var(--line);
+    color: var(--text);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.exportBtn:hover {
+    background: var(--surface);
+}
+
+.exportOff,
+.exportOff:hover {
+    color: var(--dim);
+    font-weight: 400;
+    background: transparent;
+    cursor: default;
+}
+
+/* Date presets: one row, scrolls sideways on a phone */
+.presets {
+    display: flex;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+}
+
+.preset {
+    flex: none;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+.preset:hover {
+    color: var(--text);
+}
+
+.presetOn {
+    color: var(--text);
+    font-weight: 600;
+    border-bottom-color: var(--primary);
+}
+
+.customRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.dateField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dateField input {
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    font-size: 0.8125rem;
+    color-scheme: dark;
+}
+
+:global([data-theme="light"]) .dateField input {
+    color-scheme: light;
+}
+
+/* Category chips */
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+}
+
+.chip:hover {
+    color: var(--text);
+}
+
+.chipOn {
+    border-color: var(--primary);
+    background: var(--primary-tint);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.swatch {
+    width: 8px;
+    height: 8px;
+    flex: none;
+}
+
+/* Total for the filter */
+.totalBar {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+}
+
+.totalAmt {
+    font-size: 1.5rem;
+}
+
+.totalMeta {
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.clearBtn {
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+/* Empty states */
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 48px 20px;
+}
+
+.emptyTitle {
+    margin: 0;
+    font-size: 1.125rem;
+}
+
+.emptyText {
+    margin: 0 0 4px;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    color: var(--muted);
+}
+
+.emptyBtn {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+.emptyBtn:hover {
+    background: var(--primary-tint);
+}
+
+/* Days */
+.list {
+    transition: opacity 0.15s;
+}
+
+.dim {
+    opacity: 0.5;
+}
+
+.day {
+    border-bottom: 1px solid var(--line);
+}
+
+.dayHead {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 0 20px;
+    background: var(--surface);
+}
+
+.dow {
+    width: 36px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+.dowToday {
+    color: var(--primary);
+}
+
+.date {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.todayBadge {
+    padding: 2px 6px;
+    background: var(--primary);
+    color: var(--bg);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}
+
+.dayTotal {
+    margin-left: auto;
+    font-size: 0.75rem;
+}
+
+.item {
+    display: flex;
+    align-items: stretch;
+    border-top: 1px solid var(--row2);
+}
+
+.itemBtn {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 12px 0 20px;
+    border: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.itemBtn:hover {
+    background: var(--surface);
+}
+
+.itemBtn > :first-child {
+    justify-self: start;
+}
+
+.itemMain {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    min-width: 0;
+}
+
+.itemCat {
+    font-size: 0.8125rem;
+}
+
+.itemNote {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.itemAmt {
+    font-size: 0.8125rem;
+    text-align: right;
+}
+
+.deleteBtn {
+    width: 52px;
+    border: 0;
+    border-left: 1px solid var(--row2);
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.8125rem;
+}
+
+.deleteBtn:hover {
+    background: var(--neg-hover);
+    color: var(--danger);
+}
+
+.moreBtn {
+    min-height: 52px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+.moreBtn:hover {
+    background: var(--surface);
+}
+
+.endNote {
+    padding: 18px 20px;
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    color: var(--dim);
+}
+
+.desktopText {
+    display: inline;
+}
+
+.phoneText {
+    display: none;
+}
+
+@media (max-width: 719px) {
+    .desktopText {
+        display: none;
+    }
+
+    .phoneText {
+        display: inline;
+    }
+
+    .search,
+    .chips,
+    .totalBar,
+    .dayHead,
+    .customRow {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .exportBtn {
+        padding: 0 16px;
+    }
+
+    /* Chips stay on one line and scroll sideways */
+    .chips {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .chip {
+        flex: none;
+    }
+
+    .totalBar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .clearBtn {
+        margin-left: 0;
+    }
+
+    .itemBtn {
+        padding-left: 16px;
+    }
+
+    /* Note goes under the category */
+    .itemMain {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .deleteBtn {
+        width: 48px;
+    }
+}

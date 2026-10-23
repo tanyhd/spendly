@@ -7,7 +7,10 @@ import { useExpense, type Entry } from '@/context/ExpenseContext';
 import { useToast } from '@/context/ToastContext';
 import WeekPicker from '@/common/components/WeekPicker';
 import CategoryTag from '@/common/components/CategoryTag';
-import { DOW, fmt, fmtDayShort, getWeekStart, toDateInt, todayInt } from '@/lib/format';
+import LogTabs from '@/common/components/LogTabs';
+import LimitBar from '@/common/components/LimitBar';
+import { DOW, MONTHS_SHORT, fmt, fmtDayShort, getWeekStart, toDateInt, todayInt } from '@/lib/format';
+import { budgetProgress, type BudgetProgress } from '@/lib/budgetProgress';
 import styles from './DailyLog.module.css';
 
 export default function DailyLogPage() {
@@ -18,6 +21,7 @@ export default function DailyLogPage() {
     const [loadedWeek, setLoadedWeek] = useState(0);
     const [reload, setReload] = useState(0);
     const [showCats, setShowCats] = useState(false);
+    const [limits, setLimits] = useState<{ key: string; progress: BudgetProgress } | null>(null);
 
     const weekInt = toDateInt(weekStart);
     const today = todayInt();
@@ -36,6 +40,31 @@ export default function DailyLogPage() {
     }, [weekInt, version, reload]);
 
     const loading = loadedWeek !== weekInt;
+
+    // The month whose category limits the summary shows: this month while the week includes
+    // today, otherwise the month the week starts in
+    const weekEndDate = new Date(weekStart);
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    const weekEnd = toDateInt(weekEndDate);
+    const limitDay = weekInt <= today && today <= weekEnd ? today : weekInt;
+    const limitYear = Math.floor(limitDay / 10000);
+    const limitMonth = Math.floor(limitDay / 100) % 100;
+    const limitKey = `${limitYear}-${limitMonth}`;
+    useEffect(() => {
+        let cancelled = false;
+        Promise.all([
+            fetch(`/api/budget/${limitYear}/${limitMonth}`).then(r => r.ok ? r.json() : null),
+            fetch(`/api/daily-log/month/${limitYear}/${limitMonth}`).then(r => r.ok ? r.json() : []),
+        ]).then(([plan, totals]: [{ source?: string; categoryBudgets?: { category: string; amount: number }[] } | null, { category: string; total: number }[]]) => {
+            if (cancelled) return;
+            // Only a saved month's limits count, as on the dashboard
+            const list = plan?.source === 'saved' ? (plan.categoryBudgets ?? []) : [];
+            if (!list.length) return setLimits(null);
+            const spent = Object.fromEntries(totals.map(t => [t.category, t.total]));
+            setLimits({ key: `${limitYear}-${limitMonth}`, progress: budgetProgress(list, spent, limitYear, limitMonth, todayInt()) });
+        });
+        return () => { cancelled = true; };
+    }, [limitYear, limitMonth, version, reload]);
 
     const handleDelete = useCallback(async (entry: Entry) => {
         const res = await fetch(`/api/daily-log/${entry._id}`, { method: 'DELETE' });
@@ -77,6 +106,7 @@ export default function DailyLogPage() {
 
     return (
         <div className={styles.page}>
+            <LogTabs />
             <div className={styles.toolbar}>
                 <WeekPicker weekStart={weekStart} onChange={setWeekStart} showToday className={styles.picker} />
                 <span className={styles.toolbarInfo}>MON → SUN · {entries.length} ENTRIES</span>
@@ -170,6 +200,31 @@ export default function DailyLogPage() {
                             );
                         })}
                     </div>
+                    {limits?.key === limitKey && (
+                        <div className={cx(styles.limits, !showCats && styles.catsCollapsed)} data-testid="week-limits">
+                            <div className={styles.catLine}>
+                                <span className="label">{MONTHS_SHORT[limitMonth - 1].toUpperCase()} {limitYear} limits</span>
+                                <span className="num" style={{ color: limits.progress.left < 0 ? 'var(--neg)' : undefined }}>
+                                    {limits.progress.left < 0 ? `OVER BY ${fmt(-limits.progress.left)}` : `${fmt(limits.progress.left)} LEFT`}
+                                </span>
+                            </div>
+                            {/* Only the categories spent on this week */}
+                            {limits.progress.byCategory.filter(p => catTotals[p.category]).map(p => {
+                                const c = dailyCategory(p.category);
+                                const color = p.status === 'over' ? 'var(--neg)' : p.status === 'warning' ? 'var(--primary)' : 'var(--muted)';
+                                return (
+                                    <div key={p.category} className={styles.catItem}>
+                                        <div className={styles.catLine}>
+                                            <span className={styles.catName}><span className={styles.swatch} style={{ background: c.color }} />{p.category.toUpperCase()}</span>
+                                            <span className="num" style={{ color }}>{p.left < 0 ? `OVER BY ${fmt(-p.left)}` : `${fmt(p.left)} LEFT`}</span>
+                                        </div>
+                                        <LimitBar progress={p} color={c.color} />
+                                        <span className={styles.limitNote}>{fmt(p.spent)} OF {fmt(p.limit)} THIS MONTH</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                     <button className={styles.catsToggle} onClick={() => setShowCats(s => !s)}>
                         {showCats ? 'HIDE CATEGORIES' : `SHOW ${cats.length} CATEGORIES`}
                         <span className={cx(styles.caret, showCats && styles.caretUp)} aria-hidden="true" />

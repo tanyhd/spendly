@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { signUp, addExpense, dayInt, settle } from './helpers';
+import { signUp, addExpense, dayInt, settle, thisMonth, isPhone } from './helpers';
 
 // The week shown by default is the current Monday–Sunday week
 function mondayOffset() {
@@ -79,5 +79,27 @@ test.describe('daily log', () => {
 
         await page.getByRole('button', { name: 'TODAY', exact: true }).click();
         await expect(page.getByText('Last week')).toBeHidden();
+    });
+});
+
+test.describe('daily log · month limits', () => {
+    test("the week summary shows this month's limits for the categories spent this week", async ({ page }, info) => {
+        await signUp(page);
+        const { year, month } = thisMonth();
+        const res = await page.request.put(`/api/budget/${year}/${month}`, {
+            data: { categoryBudgets: [{ category: 'Food', amount: 100 }, { category: 'Shopping', amount: 50 }] },
+        });
+        expect(res.ok()).toBeTruthy();
+        await addExpense(page, dayInt(), 'Food', 85, 'Groceries');
+
+        await page.goto('/daily-log');
+        await settle(page);
+        if (isPhone(info)) await page.getByRole('button', { name: /SHOW \d+ CATEGOR/ }).click();
+        const limits = page.getByTestId('week-limits');
+        await expect(limits).toContainText('65.00 LEFT');   // the whole month: 150 − 85
+        await expect(limits).toContainText('FOOD');
+        await expect(limits).toContainText('15.00 LEFT');
+        await expect(limits).toContainText('85.00 OF 100.00 THIS MONTH');
+        await expect(limits).not.toContainText('SHOPPING'); // nothing spent on it this week
     });
 });
