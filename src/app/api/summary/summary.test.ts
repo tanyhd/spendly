@@ -1,7 +1,7 @@
 import { GET as getSummaryRoute } from './route';
 import { encryptAmount } from '@/lib/crypto';
 import { createEntry } from '@/services/entries';
-import { savePlan, parsePlanInput, setBillPaid } from '@/services/budgets';
+import { upsertBudget, parsePlanInput, setBillPaid } from '@/services/budgets';
 import { getSummary } from '@/services/summaries';
 import { setupTestDb } from '@/test/testDb';
 import { makeUser, req, type TestUser } from '@/test/requests';
@@ -16,7 +16,7 @@ const spend = (u: TestUser, date: number, category: string, amount: number) =>
 async function plan(u: TestUser, y: number, m: number, body: unknown) {
     const p = parsePlanInput(body);
     if (!p.ok) throw new Error(p.error);
-    await savePlan(u.userId, y, m, p.data);
+    await upsertBudget(u.userId, y, m, p.data);
 }
 
 const PLAN = {

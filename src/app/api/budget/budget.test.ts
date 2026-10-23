@@ -207,11 +207,4 @@ describe('budget row ids', () => {
         expect((await load(alex, 2026, 10)).fixedExpenses[0].id).not.toContain('$');
     });
 
-    it('rows saved before ids existed get one when read', async () => {
-        await db.raw().collection('monthly_plans').insertOne({
-            userId: new (await import('mongodb')).ObjectId(alex.userId), year: 2026, month: 10,
-            income: [{ label: 'Salary', category: 'Employment', amount: 5000 }], fixedExpenses: [],
-        });
-        expect((await load(alex, 2026, 10)).income[0].id).toBeTruthy();
-    });
 });

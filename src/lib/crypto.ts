@@ -10,9 +10,8 @@ export function encryptAmount(amount: number): string {
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 
-export function decryptAmount(value: string | number): number {
-    if (typeof value === 'number') return value;
-    if (typeof value !== 'string' || !value.includes(':')) return parseFloat(value) || 0;
+/** Reads an amount written by encryptAmount; anything unreadable (wrong key, damaged) is 0 */
+export function decryptAmount(value: string): number {
     try {
         const [ivHex, authTagHex, dataHex] = value.split(':');
         const iv = Buffer.from(ivHex, 'hex');

@@ -1,4 +1,3 @@
-import { ObjectId } from 'mongodb';
 import { GET as getBudget, PUT as saveBudget } from './[year]/[month]/route';
 import { PATCH as patchBill } from './[year]/[month]/bills/[rowId]/route';
 import { GET as getUpcoming } from '../bills/upcoming/route';
@@ -50,14 +49,11 @@ describe('due days and paid ticks on fixed expenses', () => {
         expect(rows.rent.paid).toBe(false);
     });
 
-    it('saving the Budget page (which sends no due days or ticks) keeps both', async () => {
+    it('a save stores what it is sent: a row without a due day or tick has neither', async () => {
         await save(alex, 2026, 10, BILLS);
         await tick(alex, 2026, 10, 'rent', { paid: true });
-        // What today's Budget page sends: id, label, category, amount only
-        await save(alex, 2026, 10, { fixedExpenses: BILLS.fixedExpenses.map(({ id, label, category }) => ({ id, label, category, amount: 999 })) });
-        const rows = byId((await load(alex, 2026, 10)).fixedExpenses);
-        expect(rows.rent).toMatchObject({ dueDay: 1, paid: true });
-        expect(rows.phone).toMatchObject({ dueDay: 15, paid: false });
+        await save(alex, 2026, 10, { fixedExpenses: [{ id: 'rent', label: 'Rent', category: 'Housing', amount: 2200 }] });
+        expect(byId((await load(alex, 2026, 10)).fixedExpenses).rent).toMatchObject({ dueDay: null, paid: false });
     });
 
     it('a due day of null removes it', async () => {
@@ -72,10 +68,6 @@ describe('due days and paid ticks on fixed expenses', () => {
         const nov = await load(alex, 2026, 11);
         expect(nov.source).toBe('copied');
         expect(byId(nov.fixedExpenses).rent).toMatchObject({ dueDay: 1, paid: false });
-
-        // First save of the copy from today's page (no due days sent): due days stay, ticks don't carry over
-        await save(alex, 2026, 11, { fixedExpenses: nov.fixedExpenses.map(({ id, label, category, amount }: Row & { label: string; category: string; amount: number }) => ({ id, label, category, amount })) });
-        expect(byId((await load(alex, 2026, 11)).fixedExpenses).rent).toMatchObject({ dueDay: 1, paid: false });
     });
 
     it.each([
@@ -120,16 +112,6 @@ describe('PATCH a bill', () => {
         expect(byId((await load(alex, 2026, 10)).fixedExpenses).rent.paid).toBe(false);
     });
 
-    it('rows saved before ids existed get a lasting id, so they can be ticked', async () => {
-        const alex = await makeUser('Alex');
-        await db.raw().collection('monthly_plans').insertOne({
-            userId: new ObjectId(alex.userId), year: 2026, month: 10, income: [],
-            fixedExpenses: [{ label: 'Rent', category: 'Housing', amount: 2200 }],
-        });
-        const id = (await load(alex, 2026, 10)).fixedExpenses[0].id;
-        expect((await load(alex, 2026, 10)).fixedExpenses[0].id).toBe(id);
-        expect((await tick(alex, 2026, 10, id, { paid: true })).status).toBe(200);
-    });
 });
 
 describe('upcoming bills', () => {

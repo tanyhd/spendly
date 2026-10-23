@@ -16,11 +16,6 @@ describe('amount encryption', () => {
         expect(a).not.toBe(b);
     });
 
-    it('reads old plain values left from before encryption', () => {
-        expect(decryptAmount(15)).toBe(15);
-        expect(decryptAmount('15.5')).toBe(15.5);
-    });
-
     it('returns 0 instead of throwing for tampered or garbage values', () => {
         const [iv, tag, data] = encryptAmount(99).split(':');
         expect(decryptAmount(`${iv}:${tag}:${data.replace(/.$/, c => (c === '0' ? '1' : '0'))}`)).toBe(0);

@@ -5,7 +5,7 @@ import { getBudgetForMonth, upsertBudget, countBudgets } from './budgets';
 
 setupTestDb();
 
-const row = (label: string, category: string, amount: number) => ({ label, category, amount: encryptAmount(amount) });
+const row = (label: string, category: string, amount: number) => ({ id: label.toLowerCase(), label, category, amount: encryptAmount(amount) });
 
 describe('getBudgetForMonth', () => {
     it('treats an empty saved previous month as no plan (the page shows its starter template)', async () => {

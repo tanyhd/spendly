@@ -24,10 +24,10 @@ export type BudgetData = {
 /** Fields a saved plan holds; amounts already encrypted */
 export type PlanFields = Pick<PlanDoc, 'income' | 'fixedExpenses' | 'categoryBudgets'>;
 
-/** Rows as the API returns them: decrypted, and every row has an id (older rows get one on read) */
+/** Rows as the API returns them: decrypted */
 export function decryptRows(rows: PlanRowDoc[] | undefined): BudgetRow[] {
     return Array.isArray(rows)
-        ? rows.map(r => ({ id: r.id ?? newRowId(), label: r.label, category: r.category, amount: decryptAmount(r.amount) }))
+        ? rows.map(r => ({ id: r.id, label: r.label, category: r.category, amount: decryptAmount(r.amount) }))
         : [];
 }
 
@@ -39,7 +39,7 @@ export function decryptFixed(rows: PlanRowDoc[] | undefined): FixedRow[] {
 
 export function decryptLimits(rows: CategoryBudgetDoc[] | undefined): CategoryBudget[] {
     return Array.isArray(rows)
-        ? rows.map(r => ({ id: r.id ?? newRowId(), category: r.category, amount: decryptAmount(r.amount) }))
+        ? rows.map(r => ({ id: r.id, category: r.category, amount: decryptAmount(r.amount) }))
         : [];
 }
 
@@ -90,17 +90,15 @@ export function parsePlanInput(body: unknown): PlanInputResult {
                 category,
                 amount: encryptAmount(Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0),
             };
-            // Bill fields: left out = keep what's saved; dueDay null = no due day
+            // Bill fields: no due day (null) and unpaid unless given
             if (key === 'fixedExpenses') {
-                if (r.dueDay !== undefined) {
-                    if (r.dueDay === null || r.dueDay === '') row.dueDay = null;
-                    else if (Number.isInteger(r.dueDay) && (r.dueDay as number) >= 1 && (r.dueDay as number) <= 31) row.dueDay = r.dueDay as number;
-                    else return { ok: false, error: 'Fixed expenses: due day must be 1–31' };
+                const due = r.dueDay ?? null;
+                if (due !== null && !(Number.isInteger(due) && (due as number) >= 1 && (due as number) <= 31)) {
+                    return { ok: false, error: 'Fixed expenses: due day must be 1–31' };
                 }
-                if (r.paid !== undefined) {
-                    if (typeof r.paid !== 'boolean') return { ok: false, error: 'Fixed expenses: paid must be true or false' };
-                    row.paid = r.paid;
-                }
+                if (r.paid !== undefined && typeof r.paid !== 'boolean') return { ok: false, error: 'Fixed expenses: paid must be true or false' };
+                row.dueDay = due as number | null;
+                row.paid = r.paid === true;
             }
             clean.push(row);
         }
@@ -134,50 +132,9 @@ export function parsePlanInput(body: unknown): PlanInputResult {
     return { ok: true, data };
 }
 
-/** A saved plan. Rows saved before ids existed get one here, saved once, so ids never change between reads. */
 export async function getBudget(userId: string, year: number, month: number): Promise<PlanDoc | null> {
     const { plans } = await collections();
-    const plan = await plans.findOne({ userId: toObjectId(userId), year, month });
-    if (!plan) return null;
-
-    const missing = (rows?: { id?: string }[]) => rows?.some(r => !r.id) ?? false;
-    if (missing(plan.income) || missing(plan.fixedExpenses) || missing(plan.categoryBudgets)) {
-        const withIds = <T extends { id?: string }>(rows?: T[]) => rows?.map(r => (r.id ? r : { ...r, id: newRowId() }));
-        const patch = {
-            ...(plan.income && { income: withIds(plan.income) }),
-            ...(plan.fixedExpenses && { fixedExpenses: withIds(plan.fixedExpenses) }),
-            ...(plan.categoryBudgets && { categoryBudgets: withIds(plan.categoryBudgets) }),
-        };
-        // Only fills ids if the plan hasn't changed since it was read
-        await plans.updateOne({ _id: plan._id, updatedAt: plan.updatedAt }, { $set: patch });
-        return { ...plan, ...patch };
-    }
-    return plan;
-}
-
-/**
- * Saves the Budget page. A fixed row that leaves out its due day or paid tick keeps the saved
- * one (matched by row id), so saving amounts never un-ticks a bill.
- */
-export async function savePlan(userId: string, year: number, month: number, data: PlanFields) {
-    if (data.fixedExpenses) {
-        // First save of a copied month: due days come from last month; paid ticks never carry over
-        const current = await getBudget(userId, year, month);
-        const source = current ?? await getBudget(userId, month === 1 ? year - 1 : year, month === 1 ? 12 : month - 1);
-        const before = new Map(source?.fixedExpenses?.map(r => [r.id, r]) ?? []);
-        data = {
-            ...data,
-            fixedExpenses: data.fixedExpenses.map(r => {
-                const b = before.get(r.id);
-                return {
-                    ...r,
-                    ...(r.dueDay === undefined && b?.dueDay != null && { dueDay: b.dueDay }),
-                    ...(r.paid === undefined && current && b?.paid !== undefined && { paid: b.paid }),
-                };
-            }),
-        };
-    }
-    await upsertBudget(userId, year, month, data);
+    return plans.findOne({ userId: toObjectId(userId), year, month });
 }
 
 export type SetPaidResult = 'ok' | 'no-plan' | 'no-row';

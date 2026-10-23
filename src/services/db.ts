@@ -2,9 +2,9 @@ import os from 'os';
 import { MongoClient, ObjectId, type Db } from 'mongodb';
 
 // ── Stored document shapes ──────────────────────────────────────────────────
-// Amounts are AES-GCM strings (see lib/crypto); very old rows may still hold plain numbers.
+// Amounts are AES-GCM strings (see lib/crypto).
 
-export type StoredAmount = string | number;
+export type StoredAmount = string;
 
 export type UserDoc = {
     _id: ObjectId;
@@ -25,9 +25,9 @@ export type EntryDoc = {
     updatedAt?: Date;
 };
 
-/** `id` is stable across saves and copy-forward (older rows saved before ids existed have none) */
+/** `id` is stable across saves and copy-forward */
 export type PlanRowDoc = {
-    id?: string;
+    id: string;
     label: string;
     category: string;
     amount: StoredAmount;
@@ -49,7 +49,7 @@ export type PlanDoc = {
     updatedAt?: Date;
 };
 
-export type CategoryBudgetDoc = { id?: string; category: string; amount: StoredAmount };
+export type CategoryBudgetDoc = { id: string; category: string; amount: StoredAmount };
 
 export type SettingsDoc = {
     _id: ObjectId;
