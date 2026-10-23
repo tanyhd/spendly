@@ -60,7 +60,7 @@ export default function LeftToSpend({ budgets, spent }: Props) {
                     const color = p.status === 'over' ? 'var(--neg)' : p.status === 'warning' ? 'var(--primary)' : 'var(--muted)';
                     return (
                         <div key={p.category} className={styles.limitRow}>
-                            <span className={styles.catName}><span className={styles.swatch} style={{ background: c.color }} />{p.category.toUpperCase()}</span>
+                            <span className={styles.catName}><span className={styles.swatch} style={{ background: c.color }} /><span className={styles.ellipsis}>{p.category.toUpperCase()}</span></span>
                             <LimitBar progress={p} color={c.color} />
                             <span className={cx(styles.limitOf, 'num')}>{Math.round(p.spent)}/{Math.round(p.limit)}</span>
                             <span className={styles.limitState} style={{ color }}>
@@ -73,7 +73,7 @@ export default function LeftToSpend({ budgets, spent }: Props) {
                     const c = dailyCategory(s.category);
                     return (
                         <div key={s.category} className={styles.limitRow}>
-                            <span className={styles.catName}><span className={styles.swatch} style={{ background: c.color }} />{s.category.toUpperCase()}</span>
+                            <span className={styles.catName}><span className={styles.swatch} style={{ background: c.color }} /><span className={styles.ellipsis}>{s.category.toUpperCase()}</span></span>
                             <LimitBar progress={null} color={c.color} />
                             <span className={cx(styles.limitOf, 'num')}>{Math.round(s.total)}/–</span>
                             <span className={styles.limitState} style={{ color: 'var(--dim)' }}>NO LIMIT</span>

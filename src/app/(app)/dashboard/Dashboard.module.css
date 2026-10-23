@@ -940,3 +940,25 @@
     font-size: 0.5625rem;
     vertical-align: 1px;
 }
+
+/* Text that is cut off ends in an ellipsis */
+.ellipsis {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.byCatChange {
+    white-space: nowrap;
+}
+
+/* Coming up header: the counts move under the title as a whole rather than breaking mid-phrase */
+.comingHead .panelHead {
+    flex-wrap: wrap;
+    gap: 4px 12px;
+}
+
+.comingHead .panelHead > span {
+    white-space: nowrap;
+}

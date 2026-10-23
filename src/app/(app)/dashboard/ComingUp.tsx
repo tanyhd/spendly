@@ -25,14 +25,20 @@ function when(b: UpcomingBill, today: number) {
 export default function ComingUp({ upcoming, month, today, onTick }: Props) {
     const days = Array.from({ length: 7 }, (_, i) => addDaysInt(today, i));
     const unpaid = upcoming.items.filter(i => !i.paid);
-    const overdue = unpaid.filter(i => i.status === 'overdue').length;
+    // Overdue bills are counted on their own, so "next 7 days" only means bills still to come
+    const overdue = unpaid.filter(i => i.status === 'overdue');
+    const soon = unpaid.filter(i => i.status !== 'overdue');
+    const sum = (list: UpcomingBill[]) => list.reduce((t, i) => t + i.amount, 0);
     const dueDays = new Set(unpaid.map(i => i.dueDate));
     const monthName = MONTHS_SHORT[Math.floor(today / 100) % 100 - 1].toUpperCase();
     const hasBills = upcoming.items.length + upcoming.later.length > 0 || (month?.total ?? 0) > 0;
 
     let sentence: string;
-    if (unpaid.length > 0) {
-        sentence = `You have ${plural(unpaid.length, 'bill', 'bills')} due${overdue ? `, ${overdue} overdue,` : ''} in the next 7 days for $${fmt(upcoming.unpaid.amount)}.`;
+    if (soon.length > 0) {
+        sentence = `You have ${plural(soon.length, 'bill', 'bills')} due in the next 7 days for $${fmt(sum(soon))}`
+            + (overdue.length ? `, plus ${overdue.length} overdue ($${fmt(sum(overdue))}).` : '.');
+    } else if (overdue.length > 0) {
+        sentence = `${plural(overdue.length, 'bill is', 'bills are')} overdue ($${fmt(sum(overdue))}). Nothing else is due in the next 7 days.`;
     } else if (month && month.total > 0 && month.leftToPay === 0) {
         sentence = `Every bill for ${monthName} is paid. Nice.`;
     } else if (hasBills) {
@@ -47,7 +53,13 @@ export default function ComingUp({ upcoming, month, today, onTick }: Props) {
                 <div className={styles.panelHead}>
                     <span>COMING UP · NEXT 7 DAYS</span>
                     {unpaid.length > 0
-                        ? <span style={{ color: 'var(--neg)' }}>{unpaid.length} DUE · {fmt(upcoming.unpaid.amount)}</span>
+                        ? (
+                            <span style={{ color: 'var(--neg)' }}>
+                                {soon.length > 0 && `${soon.length} DUE · ${fmt(sum(soon))}`}
+                                {soon.length > 0 && overdue.length > 0 && ' · '}
+                                {overdue.length > 0 && `${overdue.length} OVERDUE`}
+                            </span>
+                        )
                         : hasBills && <span style={{ color: 'var(--pos)' }}>ALL CLEAR</span>}
                 </div>
                 <p className={styles.comingText}>{sentence}</p>
@@ -78,7 +90,7 @@ export default function ComingUp({ upcoming, month, today, onTick }: Props) {
                                 aria-label={`${b.label} paid`}
                             />
                         </span>
-                        <span className={styles.billMain}><CategoryTag category={fixedCategory(b.category)} />{b.label}</span>
+                        <span className={styles.billMain}><CategoryTag category={fixedCategory(b.category)} /><span className={styles.ellipsis}>{b.label}</span></span>
                         <span className={styles.billWhen} style={{ color: b.paid ? 'var(--pos)' : w.color }}>{b.paid ? 'PAID' : w.text}</span>
                         <span className={cx(styles.billAmt, 'num')}>{fmt(b.amount)}</span>
                     </div>

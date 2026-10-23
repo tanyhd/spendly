@@ -249,6 +249,7 @@
 }
 
 .labelInput {
+    text-overflow: ellipsis;
     min-width: 0;
     padding: 0 12px;
     border: 0;

@@ -2,6 +2,7 @@
 import { ObjectId } from 'mongodb';
 import { decryptAmount } from '@/lib/crypto';
 import { parseDateInt } from '@/lib/period';
+import { MAX_AMOUNT } from '@/lib/input';
 import { DAILY_CATEGORIES } from '@/common/constants/categories';
 import { collections, monthRange, toObjectId, type EntryDoc } from './db';
 
@@ -11,7 +12,6 @@ export type Entry = { _id: string; date: number; category: string; amount: numbe
 export type NewEntry = { date: number; category: string; amount: string; note: string };
 
 export const MAX_NOTE = 200;
-const MAX_AMOUNT = 10_000_000;
 
 type EntryInput = { date: number; category: string; amount: number; note: string };
 type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };

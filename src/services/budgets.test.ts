@@ -8,6 +8,25 @@ setupTestDb();
 const row = (label: string, category: string, amount: number) => ({ id: label.toLowerCase(), label, category, amount: encryptAmount(amount) });
 
 describe('getBudgetForMonth', () => {
+    it('copies the latest saved month before it, however far back', async () => {
+        const { userId } = await makeUser();
+        await upsertBudget(userId, 2026, 8, { income: [row('Old', 'Employment', 1)], fixedExpenses: [] });
+        await upsertBudget(userId, 2026, 10, { income: [row('Salary', 'Employment', 5000)], fixedExpenses: [] });
+        for (const [y, m] of [[2026, 11], [2026, 12], [2027, 1]]) {
+            const plan = await getBudgetForMonth(userId, y, m);
+            expect(plan).toMatchObject({ source: 'copied', copiedFrom: { year: 2026, month: 10 } });
+            expect(plan?.income[0].label).toBe('Salary');
+        }
+        expect(await getBudgetForMonth(userId, 2026, 7)).toBeNull(); // nothing saved before July
+    });
+
+    it("never copies another user's months", async () => {
+        const alex = await makeUser();
+        const sam = await makeUser();
+        await upsertBudget(sam.userId, 2026, 9, { income: [row('Salary', 'Employment', 1)], fixedExpenses: [] });
+        expect(await getBudgetForMonth(alex.userId, 2026, 10)).toBeNull();
+    });
+
     it('treats an empty saved previous month as no plan (the page shows its starter template)', async () => {
         const { userId } = await makeUser();
         await upsertBudget(userId, 2026, 9, { income: [], fixedExpenses: [] });

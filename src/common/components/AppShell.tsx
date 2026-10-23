@@ -9,6 +9,7 @@ import { useExpense } from '@/context/ExpenseContext';
 import { useNavigationGuard } from '@/context/NavigationGuardContext';
 import { initials } from '@/lib/format';
 import { useTheme } from '@/lib/theme';
+import { isTyping } from '@/lib/input';
 import styles from './AppShell.module.css';
 
 const NAV = [
@@ -37,8 +38,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
             if (e.key === 'Escape') return setMenuPath(null);
-            const tag = (e.target as HTMLElement).tagName?.toLowerCase();
-            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+            if (isTyping(e.target)) return;
             if (sheetOpen || e.metaKey || e.ctrlKey || e.altKey) return;
             if (e.key === 'n' || e.key === 'N') {
                 e.preventDefault();

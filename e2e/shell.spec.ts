@@ -29,7 +29,7 @@ test.describe('app shell', () => {
     test('adds an expense from anywhere and the dashboard updates', async ({ page }, info) => {
         if (isPhone(info)) await page.getByRole('button', { name: 'Add expense', exact: true }).click();
         else await page.keyboard.press('n');
-        await expect(page.getByRole('form', { name: 'New expense' })).toBeVisible();
+        await expect(page.getByRole('dialog', { name: 'New expense' })).toBeVisible();
 
         // Amount is required
         await page.getByRole('button', { name: /ADD ENTRY/ }).click();
@@ -50,7 +50,7 @@ test.describe('app shell', () => {
         await page.keyboard.press('n');
         await page.getByPlaceholder('0.00').fill('5');
         await page.keyboard.press('Escape');
-        await expect(page.getByRole('form', { name: 'New expense' })).toBeHidden();
+        await expect(page.getByRole('dialog', { name: 'New expense' })).toBeHidden();
         expect((await (await page.request.get(`/api/dashboard/${new Date().getFullYear()}/${new Date().getMonth() + 1}`)).json()).totalVariable).toBe(0);
     });
 

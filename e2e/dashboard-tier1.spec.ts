@@ -86,7 +86,7 @@ test.describe('dashboard · left to spend, bills and insights', () => {
         await settle(page);
 
         const coming = page.getByTestId('coming-up');
-        await expect(coming).toContainText('You have 2 bills due, 1 overdue, in the next 7 days for $750.00.');
+        await expect(coming).toContainText('You have 1 bill due in the next 7 days for $350.00, plus 1 overdue ($400.00).');
         await expect(coming.getByTestId('bill-row').filter({ hasText: 'Taxes' })).toContainText(/\d+D OVERDUE/);
         await expect(coming.getByTestId('bill-row').filter({ hasText: 'Insurance' })).toContainText('TODAY');
         await expect(coming).not.toContainText('Misc');
@@ -119,7 +119,7 @@ test.describe('dashboard · left to spend, bills and insights', () => {
         await page.goto('/dashboard');
         await settle(page);
         await page.getByRole('link', { name: /VIEW ALL/ }).click();
-        await expect(page).toHaveURL(/\/daily-log\/all$/);
+        await expect(page).toHaveURL(/\/daily-log\/all\?from=\d{8}&to=\d{8}$/); // this month's dates
         if (!isPhone(info)) await expect(page.getByRole('link', { name: 'ALL EXPENSES' })).toHaveAttribute('aria-current', 'page');
     });
 });

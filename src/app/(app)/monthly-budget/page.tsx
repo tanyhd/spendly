@@ -15,6 +15,7 @@ import LimitBar from '@/common/components/LimitBar';
 import { fmt, fmtSigned, fmtMonth, todayInt } from '@/lib/format';
 import { budgetProgress, type CategoryProgress } from '@/lib/budgetProgress';
 import { billTotals, dueDate } from '@/lib/bills';
+import { cleanMoney } from '@/lib/input';
 import styles from './MonthlyBudget.module.css';
 
 type Row = { id: string; label: string; amount: string; category: string; dueDay: string; paid: boolean };
@@ -81,6 +82,8 @@ export default function MonthlyBudgetPage() {
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [openDrop, setOpenDrop] = useState<string | null>(null);
+    // A new row whose label box should take focus once it has rendered
+    const focusNext = useRef<string | null>(null);
     const [pending, setPending] = useState<{ year: number; month: number } | null>(null);
     // Set when the user tries to leave the page with unsaved edits; calling it leaves
     const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
@@ -135,6 +138,12 @@ export default function MonthlyBudgetPage() {
 
     useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
 
+    useEffect(() => {
+        if (!focusNext.current) return;
+        focusLabel(focusNext.current);
+        focusNext.current = null;
+    });
+
     // Unsaved edits: ask before leaving the page in-app, and let the browser warn on close/reload
     useEffect(() => {
         if (!dirty) return;
@@ -170,6 +179,10 @@ export default function MonthlyBudgetPage() {
         else goTo(target.year, target.month);
     }
 
+    function focusLabel(id: string) {
+        document.querySelector<HTMLInputElement>(`[data-row-label="${id}"]`)?.focus();
+    }
+
     function setter(sec: Section) {
         return sec === 'income' ? setIncome : setFixed;
     }
@@ -185,7 +198,9 @@ export default function MonthlyBudgetPage() {
     }
 
     function addRow(sec: Section) {
-        setter(sec)(rows => [...rows, row('', sec === 'income' ? 'Employment' : 'Housing')]);
+        const r = row('', sec === 'income' ? 'Employment' : 'Housing');
+        setter(sec)(rows => [...rows, r]);
+        focusNext.current = r.id; // the new row's label box takes focus
         markDirty();
     }
 
@@ -203,7 +218,10 @@ export default function MonthlyBudgetPage() {
     function suggest() {
         const fill = DAILY_CATEGORIES.filter(c => !limits[c.id] && suggested[c.id]);
         if (fill.length === 0) {
-            toast(Object.keys(suggested).length ? 'EVERY CATEGORY WITH SPENDING HAS A LIMIT' : 'NO SPENDING IN THE LAST 3 MONTHS TO GO BY');
+            // Suggestions come from the 3 months before this one, so this month's spending doesn't count
+            toast(Object.keys(suggested).length
+                ? 'EVERY CATEGORY WITH A 3-MONTH AVERAGE ALREADY HAS A LIMIT'
+                : 'NO SPENDING IN THE 3 MONTHS BEFORE THIS ONE TO GO BY');
             return;
         }
         setLimits(l => ({ ...l, ...Object.fromEntries(fill.map(c => [c.id, suggested[c.id].toFixed(2)])) }));
@@ -235,12 +253,22 @@ export default function MonthlyBudgetPage() {
 
     async function handleSave() {
         if (saving === 'saving') return;
+        // Rows left completely empty are dropped; a row with an amount needs a label
+        const isEmpty = (r: Row) => !r.label.trim() && !(parseFloat(r.amount) > 0);
+        const unnamed = [...income, ...fixed].find(r => !isEmpty(r) && !r.label.trim());
+        if (unnamed) {
+            focusLabel(unnamed.id);
+            toast('GIVE EVERY ROW WITH AN AMOUNT A LABEL');
+            return;
+        }
+        const keptIncome = income.filter(r => !isEmpty(r));
+        const keptFixed = fixed.filter(r => !isEmpty(r));
         setSaving('saving');
         // Row ids are kept so the server can track a row across saves (bills need this)
         const strip = (rows: Row[]) => rows.map(r => ({ id: r.id, label: r.label, category: r.category, amount: parseFloat(r.amount) || 0 }));
         const body = {
-            income: strip(income),
-            fixedExpenses: fixed.map(r => ({ ...strip([r])[0], dueDay: r.dueDay ? Number(r.dueDay) : null, paid: r.paid })),
+            income: strip(keptIncome),
+            fixedExpenses: keptFixed.map(r => ({ ...strip([r])[0], dueDay: r.dueDay ? Number(r.dueDay) : null, paid: r.paid })),
             categoryBudgets: Object.entries(limits)
                 .filter(([, v]) => v !== '' && Number.isFinite(parseFloat(v)))
                 .map(([category, v]) => ({ category, amount: parseFloat(v) })),
@@ -251,10 +279,17 @@ export default function MonthlyBudgetPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const msg = (await res.json().catch(() => null))?.message;
+                setSaving('idle');
+                toast(msg ? `COULD NOT SAVE · ${String(msg).toUpperCase()}` : 'COULD NOT SAVE · TRY AGAIN');
+                return;
+            }
+            setIncome(keptIncome);
+            setFixed(keptFixed);
             setDirty(false);
             setSource({ kind: 'saved' });
-            setSavedRowIds(new Set(fixed.map(r => r.id)));
+            setSavedRowIds(new Set(keptFixed.map(r => r.id)));
             setSaving('saved');
             if (savedTimer.current) clearTimeout(savedTimer.current);
             savedTimer.current = setTimeout(() => setSaving('idle'), 3000);
@@ -342,7 +377,7 @@ export default function MonthlyBudgetPage() {
                     placeholder="0.00"
                     aria-label={`${r.label || 'Row'} amount`}
                     value={r.amount}
-                    onChange={e => edit(sec, r.id, { amount: e.target.value.replace(/[^0-9.]/g, '') })}
+                    onChange={e => edit(sec, r.id, { amount: cleanMoney(e.target.value) })}
                     onBlur={() => setter(sec)(list => list.map(x => x.id === r.id ? { ...x, amount: (parseFloat(x.amount) || 0).toFixed(2) } : x))}
                 />
             </span>
@@ -354,6 +389,8 @@ export default function MonthlyBudgetPage() {
             <input
                 className={styles.labelInput}
                 placeholder="Label"
+                aria-label={`${sec === 'income' ? 'Income' : 'Fixed'} label`}
+                data-row-label={r.id}
                 value={r.label}
                 onChange={e => edit(sec, r.id, { label: e.target.value })}
             />
@@ -448,7 +485,7 @@ export default function MonthlyBudgetPage() {
                                 {renderCategoryPill('income', r, INCOME_CATEGORIES, incomeCategory)}
                                 {renderLabel('income', r)}
                                 {renderAmount('income', r)}
-                                <button className={styles.removeBtn} onClick={() => removeRow('income', r.id)} aria-label="Remove row">✕</button>
+                                <button className={styles.removeBtn} onClick={() => removeRow('income', r.id)} aria-label={`Remove ${r.label || 'row'}`}>✕</button>
                             </div>
                         ))}
                         <button className={styles.addRowBtn} onClick={() => addRow('income')}>+ ADD INCOME ROW</button>
@@ -477,12 +514,20 @@ export default function MonthlyBudgetPage() {
                                         aria-label={`${r.label || 'Row'} due day`}
                                         title="Day of the month it's due (1–31)"
                                         value={r.dueDay}
-                                        onChange={e => edit('fixed', r.id, { dueDay: e.target.value.replace(/\D/g, '') })}
-                                        onBlur={() => setFixed(list => list.map(x => {
-                                            if (x.id !== r.id || !x.dueDay) return x;
-                                            const d = Number(x.dueDay);
-                                            return { ...x, dueDay: d >= 1 ? String(Math.min(31, d)) : '' };
-                                        }))}
+                                        onChange={e => {
+                                            // Only whole days 1–31: anything else is refused (and said so), never changed into another day
+                                            const v = e.target.value;
+                                            if (!/^\d*$/.test(v) || Number(v) > 31) return toast('DUE DAY IS A DAY OF THE MONTH, 1–31');
+                                            edit('fixed', r.id, { dueDay: v });
+                                        }}
+                                        onBlur={() => {
+                                            if (r.dueDay && Number(r.dueDay) < 1) {
+                                                toast('DUE DAY IS A DAY OF THE MONTH, 1–31');
+                                                edit('fixed', r.id, { dueDay: '' });
+                                            } else if (r.dueDay) {
+                                                edit('fixed', r.id, { dueDay: String(Number(r.dueDay)) }); // "05" → "5"
+                                            }
+                                        }}
                                     />
                                     {renderAmount('fixed', r)}
                                     <span className={styles.paidCell}>
@@ -494,7 +539,7 @@ export default function MonthlyBudgetPage() {
                                             aria-label={`${r.label || 'Bill'} paid`}
                                         />
                                     </span>
-                                    <button className={styles.removeBtn} onClick={() => removeRow('fixed', r.id)} aria-label="Remove row">✕</button>
+                                    <button className={styles.removeBtn} onClick={() => removeRow('fixed', r.id)} aria-label={`Remove ${r.label || 'row'}`}>✕</button>
                                 </div>
                             );
                         })}
@@ -552,7 +597,7 @@ export default function MonthlyBudgetPage() {
                                         placeholder={avg ? `avg ${Math.round(avg)}` : '–'}
                                         aria-label={`${c.id} limit`}
                                         value={limits[c.id] ?? ''}
-                                        onChange={e => editLimit(c.id, e.target.value.replace(/[^0-9.]/g, ''))}
+                                        onChange={e => editLimit(c.id, cleanMoney(e.target.value))}
                                         onBlur={() => setLimits(l => l[c.id] ? { ...l, [c.id]: (parseFloat(l[c.id]) || 0).toFixed(2) } : l)}
                                     />
                                 </span>

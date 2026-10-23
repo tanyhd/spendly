@@ -121,12 +121,20 @@ describe('GET /api/transactions/export', () => {
 
         const res = await exportCsv(req('/api/transactions/export?category=Food,Others', { user: alex }));
         expect(res.headers.get('content-type')).toBe('text/csv; charset=utf-8');
-        expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="spendly-transactions-\d{8}\.csv"$/);
-        expect(await res.text()).toBe(
+        expect(res.headers.get('content-disposition')).toBe('attachment; filename="spendly-expenses-all-time-food-others.csv"');
+        const bytes = Buffer.from(await res.arrayBuffer());
+        expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // UTF-8 byte order mark, for Excel
+        expect(bytes.subarray(3).toString('utf8')).toBe(
             '"Date","Category","Note","Amount"\r\n' +
-            '"2026-10-02","Others","\'=1+1",3\r\n' +
-            '"2026-10-01","Food","lunch, ""big"" one\nwith Sam",12.5\r\n'
+            '"2026-10-02","Others","\'=1+1",3.00\r\n' +
+            '"2026-10-01","Food","lunch, ""big"" one\nwith Sam",12.50\r\n'
         );
+    });
+
+    it('names the file after the filter', async () => {
+        const alex = await makeUser('Alex');
+        const res = await exportCsv(req('/api/transactions/export?from=20261001&to=20261031&q=Lunch%20Big', { user: alex }));
+        expect(res.headers.get('content-disposition')).toBe('attachment; filename="spendly-expenses-20261001-20261031-lunch-big.csv"');
     });
 
     it('needs a session and checks filters', async () => {

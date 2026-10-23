@@ -24,9 +24,11 @@ export default function ByCategory({ period, rows, timing, hasCompare }: Props) 
                 const isNew = r.prevSpent === 0 && r.spent > 0;
                 const up = (r.change ?? 0) > 0;
                 const pct = r.prevSpent ? Math.round((Math.abs(r.change ?? 0) / r.prevSpent) * 100) : null;
+                // Against a tiny base a percentage means little ("3134%"): just the dollars then
+                const pctText = pct !== null && pct < 1000 ? ` ${pct}%` : '';
                 return (
                     <div key={r.category} className={styles.byCatRow}>
-                        <span className={styles.byCatName}><CategoryTag category={dailyCategory(r.category)} />{r.category}</span>
+                        <span className={styles.byCatName}><CategoryTag category={dailyCategory(r.category)} /><span className={styles.ellipsis}>{r.category}</span></span>
                         <span className={cx(styles.byCatAmt, 'num')}>{fmt(r.spent)}</span>
                         {r.prevSpent === null ? <span /> : isNew ? (
                             <span className={styles.byCatChange} style={{ color: 'var(--muted)' }}>NEW</span>
@@ -34,11 +36,11 @@ export default function ByCategory({ period, rows, timing, hasCompare }: Props) 
                             <span className={styles.byCatChange} style={{ color: 'var(--dim)' }}>SAME</span>
                         ) : (
                             <span className={cx(styles.byCatChange, 'num')} style={{ color: up ? 'var(--neg)' : 'var(--pos)' }}>
-                                <span className={styles.arrow} aria-hidden="true">{up ? '▲' : '▼'}</span> {pct}% {up ? '+' : '−'}{fmt(Math.abs(r.change ?? 0))}
+                                <span className={styles.arrow} aria-hidden="true">{up ? '▲' : '▼'}</span>{pctText} {up ? '+' : '−'}{fmt(Math.abs(r.change ?? 0))}
                             </span>
                         )}
                         <span className={cx(styles.byCatWas, 'num')}>
-                            {r.prevSpent === null ? '' : isNew ? 'NEW' : `WAS ${fmt(r.prevSpent)}`}
+                            {r.prevSpent === null || isNew ? '' : `WAS ${fmt(r.prevSpent)}`}
                         </span>
                     </div>
                 );

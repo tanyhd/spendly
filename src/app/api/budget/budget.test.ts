@@ -156,6 +156,10 @@ describe('budget save is locked down', () => {
         [{ fixedExpenses: [{ label: 'Rent', category: 'Housing', amount: 'abc' }] }, 'Fixed expenses: amounts must be 0 or more'],
         [{ income: [{ label: 'x'.repeat(81), category: 'Employment', amount: 1 }] }, 'Income: labels can be at most 80 characters'],
         [{ income: Array.from({ length: 101 }, () => ({ label: 'x', category: 'Employment', amount: 1 })) }, 'Income can have at most 100 rows'],
+        [{ income: [{ label: '   ', category: 'Employment', amount: 1 }] }, 'Income: every row needs a label'],
+        [{ fixedExpenses: [{ category: 'Housing', amount: 1 }] }, 'Fixed expenses: every row needs a label'],
+        [{ income: [{ label: 'Salary', category: 'Employment', amount: 10_000_000.01 }] }, 'Income: amounts can be at most 10,000,000'],
+        [{ categoryBudgets: [{ category: 'Food', amount: 99_999_999_999 }] }, 'Category budgets: limits can be at most 10,000,000'],
     ])('refuses bad input (%#) and saves nothing', async (body, msg) => {
         expect(await status(body)).toBe(400);
         expect(await message(body)).toBe(msg);

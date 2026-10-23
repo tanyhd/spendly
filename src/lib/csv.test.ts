@@ -6,7 +6,7 @@ describe('csv', () => {
     });
 
     it('keeps newlines inside the quoted cell', () => {
-        expect(toCsv([['a\nb', 1]])).toBe('"a\nb",1\r\n');
+        expect(toCsv([['a\nb', 1]])).toBe('﻿"a\nb",1.00\r\n');
     });
 
     it('stops spreadsheets running text as a formula', () => {
@@ -16,8 +16,8 @@ describe('csv', () => {
         expect(csvCell('@SUM(A1)')).toBe('"\'@SUM(A1)"');
     });
 
-    it('writes numbers as they are, negatives included', () => {
-        expect(csvCell(-12.5)).toBe('-12.5');
-        expect(csvCell(0)).toBe('0');
+    it('writes amounts with 2 decimals, negatives included', () => {
+        expect(csvCell(-12.5)).toBe('-12.50');
+        expect(csvCell(0)).toBe('0.00');
     });
 });

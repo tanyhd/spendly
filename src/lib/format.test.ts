@@ -50,6 +50,7 @@ describe('weeks (Monday to Sunday)', () => {
     it('labels a week, spanning months when needed', () => {
         expect(fmtWeekRange(new Date(2026, 9, 19))).toBe('OCT 19–25 2026');
         expect(fmtWeekRange(new Date(2026, 9, 26))).toBe('OCT 26 – NOV 1 2026');
+        expect(fmtWeekRange(new Date(2025, 11, 29))).toBe('DEC 29 2025 – JAN 4 2026'); // both years when it crosses New Year
     });
 
     it('labels a month', () => {

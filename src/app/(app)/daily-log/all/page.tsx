@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import cx from 'classnames';
 import { DAILY_CATEGORIES, dailyCategory } from '@/common/constants/categories';
 import { useExpense, type Entry } from '@/context/ExpenseContext';
@@ -8,6 +9,7 @@ import { useToast } from '@/context/ToastContext';
 import CategoryTag from '@/common/components/CategoryTag';
 import LogTabs from '@/common/components/LogTabs';
 import { DOW, fmt, fmtDayShort, fromDateInt, isoToDateInt, dateIntToIso, todayInt } from '@/lib/format';
+import { isTyping } from '@/lib/input';
 import styles from './AllExpenses.module.css';
 
 type Preset = 'this-month' | 'last-month' | 'last-3' | 'this-year' | 'all' | 'custom';
@@ -54,13 +56,25 @@ function dow(n: number) {
     return DOW[(fromDateInt(n).getDay() + 6) % 7];
 }
 
+// useSearchParams needs a Suspense boundary so the rest of the page can still be prerendered
 export default function AllExpensesPage() {
+    return <Suspense><AllExpenses /></Suspense>;
+}
+
+function AllExpenses() {
     const { openAdd, openEdit, version } = useExpense();
     const toast = useToast();
     const [q, setQ] = useState('');
     const [query, setQuery] = useState(''); // q after typing pauses
-    const [preset, setPreset] = useState<Preset>('all');
-    const [custom, setCustom] = useState({ from: '', to: '' });
+    // ?from=YYYYMMDD&to=YYYYMMDD (from the dashboard's VIEW ALL) opens as a custom range
+    const search = useSearchParams();
+    const linked = { from: search.get('from') ?? '', to: search.get('to') ?? '' };
+    const fromLink = /^\d{8}$/.test(linked.from) && /^\d{8}$/.test(linked.to);
+    const [preset, setPreset] = useState<Preset>(fromLink ? 'custom' : 'all');
+    const [custom, setCustom] = useState(fromLink
+        ? { from: dateIntToIso(Number(linked.from)), to: dateIntToIso(Number(linked.to)) }
+        : { from: '', to: '' });
+    const [error, setError] = useState('');
     const [cats, setCats] = useState<string[]>([]);
     const [data, setData] = useState<Page | null>(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -69,6 +83,8 @@ export default function AllExpensesPage() {
     const today = todayInt();
 
     const range = presetRange(preset, custom);
+    // A custom range the wrong way round: say so instead of asking the server
+    const rangeError = range.from && range.to && range.from > range.to ? 'The From date is after the To date.' : '';
     const params = new URLSearchParams();
     if (range.from) params.set('from', String(range.from));
     if (range.to) params.set('to', String(range.to));
@@ -85,8 +101,7 @@ export default function AllExpensesPage() {
     // "/" jumps to search, like the wireframe says
     useEffect(() => {
         function onKey(e: KeyboardEvent) {
-            const tag = (e.target as HTMLElement).tagName?.toLowerCase();
-            if (e.key !== '/' || tag === 'input' || tag === 'textarea' || e.metaKey || e.ctrlKey) return;
+            if (e.key !== '/' || isTyping(e.target) || e.metaKey || e.ctrlKey) return;
             e.preventDefault();
             searchRef.current?.focus();
         }
@@ -96,14 +111,20 @@ export default function AllExpensesPage() {
 
     // First page whenever the filter changes, after an add (version) and after an edit/delete/undo (reload)
     useEffect(() => {
+        if (rangeError) return;
         let cancelled = false;
         const p = new URLSearchParams(filterKey);
         p.set('limit', String(PAGE_SIZE));
         fetch(`/api/transactions?${p}`)
-            .then(r => r.ok ? r.json() : null)
-            .then((page: Page | null) => { if (!cancelled && page) setData(page); });
+            .then(async r => ({ ok: r.ok, body: await r.json().catch(() => null) }))
+            .catch(() => ({ ok: false, body: null }))
+            .then(({ ok, body }) => {
+                if (cancelled) return;
+                if (ok) { setData(body as Page); setError(''); }
+                else setError(body?.message ? `${body.message}.` : 'Could not load expenses. Try again.');
+            });
         return () => { cancelled = true; };
-    }, [filterKey, version, reload]);
+    }, [filterKey, version, reload, rangeError]);
 
     async function loadMore() {
         if (!data?.nextCursor || loadingMore) return;
@@ -151,8 +172,11 @@ export default function AllExpensesPage() {
         setCustom({ from: '', to: '' });
     }
 
+    // " in Food or Transport", for the no-results message
+    const catText = cats.length ? ` in ${cats.join(cats.length === 2 ? ' or ' : ', ')}` : '';
     const filtered = Boolean(query) || preset !== 'all' || cats.length > 0;
-    const count = data?.total.count ?? 0;
+    const problem = rangeError || error;
+    const count = problem ? 0 : data?.total.count ?? 0;
     const presetInfo = PRESETS.find(p => p.id === preset)!;
     const rangeText = range.from || range.to
         ? `${range.from ? fmtDay(range.from) : 'START'} → ${range.to ? fmtDay(range.to) : 'TODAY'}`
@@ -250,17 +274,27 @@ export default function AllExpensesPage() {
 
             <div className={styles.totalBar} data-testid="filter-total">
                 <span className={cx(styles.totalAmt, 'num')} style={{ color: count ? 'var(--primary)' : 'var(--muted)' }}>
-                    ${fmt(data?.total.amount ?? 0)}
+                    ${fmt(problem ? 0 : data?.total.amount ?? 0)}
                 </span>
                 <span className={styles.totalMeta}>{metaText}</span>
                 {filtered && <button className={styles.clearBtn} onClick={clearFilters}>CLEAR FILTERS</button>}
             </div>
 
-            {data && count === 0 && (
+            {problem && (
+                <div className={styles.empty} role="alert">
+                    <p className={styles.emptyTitle}>{problem}</p>
+                    <p className={styles.emptyText}>{rangeError ? 'Pick a From date on or before the To date.' : 'Change the filters or clear them.'}</p>
+                    <button className={styles.emptyBtn} onClick={clearFilters}>CLEAR FILTERS</button>
+                </div>
+            )}
+
+            {!problem && data && count === 0 && (
                 filtered ? (
                     <div className={styles.empty}>
                         <p className={styles.emptyTitle}>
-                            {query ? `No expenses match "${query}"${presetInfo.inText}.` : `No expenses${presetInfo.inText} for these filters.`}
+                            {query
+                                ? `No expenses match "${query}"${catText}${presetInfo.inText}.`
+                                : `No expenses${catText}${presetInfo.inText}.`}
                         </p>
                         <p className={styles.emptyText}>Try a wider date range, fewer categories or a shorter search.</p>
                         <button className={styles.emptyBtn} onClick={clearFilters}>CLEAR FILTERS</button>
@@ -276,7 +310,7 @@ export default function AllExpensesPage() {
             )}
 
             <div className={cx(styles.list, !data && styles.dim)}>
-                {groups.map(g => (
+                {!problem && groups.map(g => (
                     <section key={g.date} className={styles.day} aria-label={fmtDay(g.date)}>
                         <div className={styles.dayHead}>
                             <span className={cx(styles.dow, g.date === today && styles.dowToday)}>{dow(g.date)}</span>
@@ -305,7 +339,7 @@ export default function AllExpensesPage() {
                 ))}
             </div>
 
-            {data?.nextCursor && (
+            {!problem && data?.nextCursor && (
                 <button className={styles.moreBtn} onClick={loadMore} disabled={loadingMore}>
                     {loadingMore ? 'LOADING…' : `LOAD ${Math.min(PAGE_SIZE, left)} MORE · ${left} LEFT`}
                 </button>

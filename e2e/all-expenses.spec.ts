@@ -108,10 +108,11 @@ test.describe('all expenses', () => {
         const download = page.waitForEvent('download');
         await page.getByRole('link', { name: /CSV/ }).click();
         const file = await (await download).path();
-        const text = (await import('fs')).readFileSync(file, 'utf8');
-        expect(text.split('\r\n').filter(Boolean)).toEqual([
+        const raw = (await import('fs')).readFileSync(file, 'utf8');
+        expect(raw.startsWith('﻿')).toBe(true); // byte order mark, so Excel reads it as UTF-8
+        expect(raw.slice(1).split('\r\n').filter(Boolean)).toEqual([
             '"Date","Category","Note","Amount"',
-            expect.stringMatching(/^"\d{4}-\d{2}-\d{2}","Food","Lunch, ""big"" one",12\.5$/),
+            expect.stringMatching(/^"\d{4}-\d{2}-\d{2}","Food","Lunch, ""big"" one",12\.50$/),
         ]);
     });
 

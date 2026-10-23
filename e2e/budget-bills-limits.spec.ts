@@ -52,8 +52,10 @@ test.describe('bills on the Budget page', () => {
 
         const due = page.getByRole('textbox', { name: 'Rent due day' });
         await due.fill('45');
+        await expect(due).toHaveValue(''); // not a day of the month: refused, not changed into 31
+        await due.fill('31');
         await due.blur();
-        await expect(due).toHaveValue('31'); // capped at 31
+        await expect(due).toHaveValue('31');
         await page.getByRole('button', { name: 'SAVE MONTH' }).click();
         await expect(page.getByRole('button', { name: '✓ SAVED' })).toBeVisible();
 

@@ -1,6 +1,7 @@
 // Monthly plans (the Budget page): planned income, fixed expenses and category limits per month.
 import { randomUUID } from 'crypto';
 import { decryptAmount, encryptAmount } from '@/lib/crypto';
+import { MAX_AMOUNT } from '@/lib/input';
 import { INCOME_CATEGORIES, FIXED_CATEGORIES, DAILY_CATEGORIES } from '@/common/constants/categories';
 import { collections, toObjectId, type PlanDoc, type PlanRowDoc, type CategoryBudgetDoc } from './db';
 
@@ -79,11 +80,13 @@ export function parsePlanInput(body: unknown): PlanInputResult {
             const name = typeof r.label === 'string' ? r.label.trim() : '';
             const category = typeof r.category === 'string' ? r.category : '';
             const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount ?? ''));
+            if (!name) return { ok: false, error: `${label}: every row needs a label` };
             if (name.length > MAX_LABEL) return { ok: false, error: `${label}: labels can be at most ${MAX_LABEL} characters` };
             if (!(categories as readonly string[]).includes(category)) return { ok: false, error: `${label}: unknown category "${category}"` };
             if (r.amount !== undefined && r.amount !== '' && (!Number.isFinite(amount) || amount < 0)) {
                 return { ok: false, error: `${label}: amounts must be 0 or more` };
             }
+            if (amount > MAX_AMOUNT) return { ok: false, error: `${label}: amounts can be at most ${MAX_AMOUNT.toLocaleString('en-US')}` };
             const row: PlanRowDoc = {
                 id: typeof r.id === 'string' && ROW_ID.test(r.id) ? r.id : newRowId(),
                 label: name,
@@ -119,6 +122,7 @@ export function parsePlanInput(body: unknown): PlanInputResult {
             if (!allowed.includes(category)) return { ok: false, error: `Category budgets: unknown category "${category}"` };
             if (seen.has(category)) return { ok: false, error: `Category budgets: ${category} has more than one limit` };
             if (!Number.isFinite(amount) || amount < 0) return { ok: false, error: 'Category budgets: limits must be 0 or more' };
+            if (amount > MAX_AMOUNT) return { ok: false, error: `Category budgets: limits can be at most ${MAX_AMOUNT.toLocaleString('en-US')}` };
             seen.add(category);
             clean.push({
                 id: typeof r.id === 'string' && ROW_ID.test(r.id) ? r.id : newRowId(),
@@ -167,8 +171,8 @@ export async function countBudgets(userId: string, year?: number, month?: number
 }
 
 /**
- * The month's plan for the Budget page: the saved plan, or last month's rows as a copy
- * (not saved), or null when neither exists (the page then shows its starter template).
+ * The month's plan for the Budget page: the saved plan, or a copy (not saved) of the latest saved
+ * month before it, or null when there is none (the page then shows its starter template).
  */
 export async function getBudgetForMonth(userId: string, year: number, month: number): Promise<BudgetData> {
     const budget = await getBudget(userId, year, month);
@@ -181,9 +185,11 @@ export async function getBudgetForMonth(userId: string, year: number, month: num
         };
     }
 
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    const prev = await getBudget(userId, prevYear, prevMonth);
+    const { plans } = await collections();
+    const prev = await plans.findOne(
+        { userId: toObjectId(userId), $or: [{ year: { $lt: year } }, { year, month: { $lt: month } }] },
+        { sort: { year: -1, month: -1 } },
+    );
     if (!prev) return null;
 
     const income = decryptRows(prev.income);
@@ -192,5 +198,5 @@ export async function getBudgetForMonth(userId: string, year: number, month: num
     const categoryBudgets = decryptLimits(prev.categoryBudgets);
     if (income.length === 0 && fixedExpenses.length === 0 && categoryBudgets.length === 0) return null;
 
-    return { income, fixedExpenses, categoryBudgets, source: 'copied', copiedFrom: { year: prevYear, month: prevMonth } };
+    return { income, fixedExpenses, categoryBudgets, source: 'copied', copiedFrom: { year: prev.year, month: prev.month } };
 }

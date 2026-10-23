@@ -9,6 +9,7 @@ import {
     DOW, fmt, fmtDayShort, fromDateInt, todayInt, addDaysInt, dateIntToIso, isoToDateInt,
 } from '@/lib/format';
 import styles from './ExpenseSheet.module.css';
+import { cleanMoney } from '@/lib/input';
 
 type Props = {
     sheet: SheetState;
@@ -88,7 +89,13 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
     return (
         <>
             <div className={styles.overlay} onClick={onClose} />
-            <form className={styles.sheet} onSubmit={handleSubmit} aria-label={isEdit ? 'Edit expense' : 'New expense'}>
+            <form
+                className={styles.sheet}
+                onSubmit={handleSubmit}
+                role="dialog"
+                aria-modal="true"
+                aria-label={isEdit ? 'Edit expense' : 'New expense'}
+            >
                 <div className={styles.head}>
                     <span className={styles.title}>{isEdit ? 'EDIT EXPENSE' : 'NEW EXPENSE'}</span>
                     <button type="button" className={styles.esc} onClick={onClose}>ESC ✕</button>
@@ -105,7 +112,7 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
                                 inputMode="decimal"
                                 placeholder="0.00"
                                 value={amount}
-                                onChange={e => { setAmount(e.target.value.replace(/[^0-9.]/g, '')); setError(''); }}
+                                onChange={e => { setAmount(cleanMoney(e.target.value)); setError(''); }}
                             />
                         </span>
                         {error && <span className={styles.error}>✕ {error}</span>}

@@ -265,7 +265,7 @@ function Loaded({ s, dash, upcoming, recent, period, label, today, year, month, 
                             <span className={styles.guideBody}>
                                 <span className={styles.guideHead}>Save a budget for {label}</span>
                                 <span className={styles.guideText}>
-                                    Income only counts once the month&apos;s budget is saved. We&apos;ll start you from last month&apos;s rows.
+                                    Income only counts once the month&apos;s budget is saved. A month with a saved budget before it starts as a copy of it.
                                 </span>
                                 <span className={styles.guideCta}>OPEN BUDGET →</span>
                             </span>
@@ -312,7 +312,8 @@ function Loaded({ s, dash, upcoming, recent, period, label, today, year, month, 
             <div className={styles.recent}>
                 <div className={styles.recentHead}>
                     <span>RECENT · {label}</span>
-                    <Link href="/daily-log/all" className={styles.viewAll}>VIEW ALL →</Link>
+                    {/* Opens All expenses for the same dates as this view */}
+                    <Link href={`/daily-log/all?from=${s.range.start}&to=${s.range.end}`} className={styles.viewAll}>VIEW ALL →</Link>
                 </div>
                 {recent.length === 0 ? (
                     <div className={styles.recentEmpty}>

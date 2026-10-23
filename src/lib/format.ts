@@ -57,13 +57,16 @@ export function getWeekStart(date: Date): Date {
     return d;
 }
 
-/** "OCT 19–25 2026" / "SEP 28 – OCT 4 2026" */
+/** "OCT 19–25 2026" / "SEP 28 – OCT 4 2026" / "DEC 29 2025 – JAN 4 2026" */
 export function fmtWeekRange(ws: Date): string {
     const end = new Date(ws);
     end.setDate(end.getDate() + 6);
     const sm = MONTHS_SHORT[ws.getMonth()].toUpperCase();
     const em = MONTHS_SHORT[end.getMonth()].toUpperCase();
     if (sm === em) return `${sm} ${ws.getDate()}–${end.getDate()} ${ws.getFullYear()}`;
+    if (ws.getFullYear() !== end.getFullYear()) {
+        return `${sm} ${ws.getDate()} ${ws.getFullYear()} – ${em} ${end.getDate()} ${end.getFullYear()}`;
+    }
     return `${sm} ${ws.getDate()} – ${em} ${end.getDate()} ${end.getFullYear()}`;
 }
 
