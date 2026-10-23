@@ -81,7 +81,8 @@ export default function ComingUp({ upcoming, month, today, onTick }: Props) {
                 const w = when(b, today);
                 return (
                     <div key={`${b.year}-${b.month}-${b.rowId}`} className={cx(styles.billRow, b.status === 'overdue' && styles.billOverdue, b.paid && styles.billPaid)} data-testid="bill-row">
-                        <span className={styles.billTick}>
+                        {/* The whole cell is the tap target, not just the 16px box */}
+                        <label className={styles.billTick}>
                             <input
                                 type="checkbox"
                                 className={cx(styles.paidBox, b.status === 'overdue' && styles.paidBoxAlert)}
@@ -89,8 +90,8 @@ export default function ComingUp({ upcoming, month, today, onTick }: Props) {
                                 onChange={() => onTick(b)}
                                 aria-label={`${b.label} paid`}
                             />
-                        </span>
-                        <span className={styles.billMain}><CategoryTag category={fixedCategory(b.category)} /><span className={styles.ellipsis}>{b.label}</span></span>
+                        </label>
+                        <span className={styles.billMain}><CategoryTag category={fixedCategory(b.category)} neutral /><span className={styles.ellipsis}>{b.label}</span></span>
                         <span className={styles.billWhen} style={{ color: b.paid ? 'var(--pos)' : w.color }}>{b.paid ? 'PAID' : w.text}</span>
                         <span className={cx(styles.billAmt, 'num')}>{fmt(b.amount)}</span>
                     </div>

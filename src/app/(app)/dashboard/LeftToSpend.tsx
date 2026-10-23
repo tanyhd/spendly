@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import cx from 'classnames';
-import type { BudgetProgress } from '@/lib/budgetProgress';
+import { overText, type BudgetProgress } from '@/lib/budgetProgress';
 import { dailyCategory } from '@/common/constants/categories';
 import LimitBar from '@/common/components/LimitBar';
 import SegmentBar from '@/common/components/SegmentBar';
@@ -27,7 +27,7 @@ export default function LeftToSpend({ budgets, spent }: Props) {
         );
     }
 
-    const over = budgets.left < 0;
+    const over = overText(budgets);
     const limited = new Set(budgets.byCategory.map(c => c.category));
     // Most used first; categories with spending but no limit go last
     const rows = [...budgets.byCategory].sort((a, b) => (b.pct ?? (b.spent > 0 ? Infinity : 0)) - (a.pct ?? (a.spent > 0 ? Infinity : 0)));
@@ -39,9 +39,9 @@ export default function LeftToSpend({ budgets, spent }: Props) {
                 <span>LEFT TO SPEND</span>
                 <span>{budgets.timing === 'current' ? `${plural(budgets.daysLeft, 'DAY', 'DAYS')} LEFT` : budgets.timing === 'past' ? 'FINAL' : 'NOT STARTED'}</span>
             </div>
-            <span className={cx(styles.leftValue, 'num')} style={{ color: over ? 'var(--neg)' : undefined }}>
-                {over ? `−${fmt(-budgets.left)}` : fmt(budgets.left)}
-            </span>
+            <span className={cx(styles.leftValue, 'num')}>{fmt(budgets.available)}</span>
+            {/* Overspending in one category is shown on its own; it doesn't use up the others */}
+            {over && <span className={styles.note} style={{ color: 'var(--neg)' }}>{over}</span>}
             <span className={styles.note}>
                 {fmt(budgets.spent)} SPENT OF {fmt(budgets.totalLimit)} BUDGETED
                 {budgets.unbudgetedSpent > 0 && ` · ${fmt(budgets.unbudgetedSpent)} UNBUDGETED`}
@@ -52,7 +52,7 @@ export default function LeftToSpend({ budgets, spent }: Props) {
             <SegmentBar
                 segments={40}
                 rate={budgets.totalLimit > 0 ? Math.min(100, (budgets.spent / budgets.totalLimit) * 100) : 100}
-                color={over ? 'var(--neg)' : budgets.spent >= budgets.totalLimit * 0.8 ? 'var(--primary)' : 'var(--soft)'}
+                color={budgets.left < 0 ? 'var(--neg)' : budgets.spent >= budgets.totalLimit * 0.8 ? 'var(--primary)' : 'var(--soft)'}
             />
             <div className={styles.limitList}>
                 {rows.map(p => {

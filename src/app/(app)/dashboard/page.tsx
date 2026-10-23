@@ -14,6 +14,7 @@ import SegmentBar from '@/common/components/SegmentBar';
 import { DOW, addDaysInt, fmt, fmtSigned, fmtMonth, fmtDayShort, todayInt, plural } from '@/lib/format';
 import { PERIODS, periodLabel, periodRange, previousRange, daysIn, type Period } from '@/lib/period';
 import type { UpcomingBill, UpcomingResult } from '@/lib/bills';
+import { overText } from '@/lib/budgetProgress';
 import Insights from './Insights';
 import LeftToSpend from './LeftToSpend';
 import ByCategory from './ByCategory';
@@ -362,11 +363,11 @@ function WeekKpis({ s, today }: { s: Summary; today: number }) {
             </div>
             <div className={cx(styles.kpi, styles.kpiRate)}>
                 <span className="label">This month left to spend</span>
-                <span className={cx(styles.kpiValue, 'num')} style={{ color: s.budgets && s.budgets.left < 0 ? 'var(--neg)' : undefined }}>
-                    {s.budgets ? fmt(s.budgets.left) : '—'}
+                <span className={cx(styles.kpiValue, 'num')} style={{ color: s.budgets && s.budgets.available === 0 ? 'var(--neg)' : undefined }}>
+                    {s.budgets ? fmt(s.budgets.available) : '—'}
                 </span>
                 <span className={styles.note}>
-                    {s.budgets ? `CATEGORY LIMITS · ${fmtMonth(Math.floor(today / 10000), Math.floor(today / 100) % 100)}` : s.timing === 'current' ? 'NO LIMITS SET' : 'SHOWN FOR THIS WEEK'}
+                    {s.budgets ? overText(s.budgets) ?? `CATEGORY LIMITS · ${fmtMonth(Math.floor(today / 10000), Math.floor(today / 100) % 100)}` : s.timing === 'current' ? 'NO LIMITS SET' : 'SHOWN FOR THIS WEEK'}
                 </span>
             </div>
         </div>

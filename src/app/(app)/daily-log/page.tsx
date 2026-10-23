@@ -204,9 +204,7 @@ export default function DailyLogPage() {
                         <div className={cx(styles.limits, !showCats && styles.catsCollapsed)} data-testid="week-limits">
                             <div className={styles.catLine}>
                                 <span className="label">{MONTHS_SHORT[limitMonth - 1].toUpperCase()} {limitYear} limits</span>
-                                <span className="num" style={{ color: limits.progress.left < 0 ? 'var(--neg)' : undefined }}>
-                                    {limits.progress.left < 0 ? `OVER BY ${fmt(-limits.progress.left)}` : `${fmt(limits.progress.left)} LEFT`}
-                                </span>
+                                <span className="num">{fmt(limits.progress.available)} LEFT</span>
                             </div>
                             {/* Only the categories spent on this week */}
                             {limits.progress.byCategory.filter(p => catTotals[p.category]).map(p => {

@@ -130,13 +130,14 @@
   --heat-2: #F0AC86;
   --heat-3: #E57A45;
 
-  --c-food: #C77A00;
-  --c-transport: #1F7FD1;
+  /* Category colours are also small text (tags), so each is at least 4.5:1 on --bg and --surface */
+  --c-food: #9F6200;
+  --c-transport: #1C72BC;
   --c-shopping: #C7366F;
-  --c-health: #0F9480;
+  --c-health: #0D7E6D;
   --c-ent: #6E4FD8;
-  --c-edu: #958600;
-  --c-util: #5F8A14;
+  --c-edu: #7D7100;
+  --c-util: #557B12;
   --f1: #2B2B2B;
   --f2: #4D4D4D;
   --f3: #6E6E6E;

@@ -13,7 +13,7 @@ import CategoryTag from '@/common/components/CategoryTag';
 import SegmentBar from '@/common/components/SegmentBar';
 import LimitBar from '@/common/components/LimitBar';
 import { fmt, fmtSigned, fmtMonth, todayInt } from '@/lib/format';
-import { budgetProgress, type CategoryProgress } from '@/lib/budgetProgress';
+import { budgetProgress, overText, type CategoryProgress } from '@/lib/budgetProgress';
 import { billTotals, dueDate } from '@/lib/bills';
 import { cleanMoney } from '@/lib/input';
 import styles from './MonthlyBudget.module.css';
@@ -460,8 +460,8 @@ export default function MonthlyBudgetPage() {
                         <span className={styles.sumLabel}>
                             LEFT TO SPEND{progress?.dailyAllowance != null && ` · ${fmt(progress.dailyAllowance)}/DAY`}
                         </span>
-                        <span className={cx(styles.sumValue, 'num')} style={{ color: progress && progress.left < 0 ? 'var(--neg)' : undefined }}>
-                            {progress ? fmt(progress.left) : <span className={styles.dimText}>NO LIMITS</span>}
+                        <span className={cx(styles.sumValue, 'num')} style={{ color: progress && progress.available === 0 ? 'var(--neg)' : undefined }}>
+                            {progress ? fmt(progress.available) : <span className={styles.dimText}>NO LIMITS</span>}
                         </span>
                     </div>
                     <div className={cx(styles.sumCell, styles.sumWide)} data-testid="sum-bills">
@@ -530,7 +530,8 @@ export default function MonthlyBudgetPage() {
                                         }}
                                     />
                                     {renderAmount('fixed', r)}
-                                    <span className={styles.paidCell}>
+                                    {/* The whole cell is the tap target, not just the 16px box */}
+                                    <label className={styles.paidCell}>
                                         <input
                                             type="checkbox"
                                             className={cx(styles.paidBox, state === 'overdue' && styles.paidBoxAlert)}
@@ -538,7 +539,7 @@ export default function MonthlyBudgetPage() {
                                             onChange={() => togglePaid(r)}
                                             aria-label={`${r.label || 'Bill'} paid`}
                                         />
-                                    </span>
+                                    </label>
                                     <button className={styles.removeBtn} onClick={() => removeRow('fixed', r.id)} aria-label={`Remove ${r.label || 'row'}`}>✕</button>
                                 </div>
                             );
@@ -562,10 +563,11 @@ export default function MonthlyBudgetPage() {
                     {progress ? (
                         <div className={styles.leftHead}>
                             <div className={styles.leftLine}>
-                                <span className={cx(styles.leftBig, 'num')} style={{ color: progress.left < 0 ? 'var(--neg)' : undefined }}>
-                                    {progress.left < 0 ? `$${fmt(-progress.left)} over budget` : `$${fmt(progress.left)} left to spend`}
+                                <span className={cx(styles.leftBig, 'num')}>
+                                    ${fmt(progress.available)} left to spend
                                 </span>
                                 <span className={styles.leftMeta}>
+                                    {overText(progress) && <span style={{ color: 'var(--neg)' }}>{overText(progress)} · </span>}
                                     {fmt(progress.spent)} SPENT OF {fmt(progress.totalLimit)}
                                     {progress.dailyAllowance != null && progress.timing === 'current' && ` · $${fmt(progress.dailyAllowance)}/DAY FOR ${progress.daysLeft} ${progress.daysLeft === 1 ? 'DAY' : 'DAYS'}`}
                                     {progress.unbudgetedSpent > 0 && ` · ${fmt(progress.unbudgetedSpent)} UNBUDGETED`}

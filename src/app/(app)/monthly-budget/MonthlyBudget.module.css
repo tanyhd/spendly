@@ -709,3 +709,12 @@
         font-size: 1.25rem;
     }
 }
+
+/* The whole cell ticks the box, so it is easy to hit on a phone */
+.paidCell {
+    cursor: pointer;
+}
+
+.paidCell {
+    cursor: pointer;
+}

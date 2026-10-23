@@ -45,11 +45,20 @@ test.describe('app shell', () => {
         await expect(page.getByText('−18.40').first()).toBeVisible();
     });
 
-    test('Escape closes the add panel without saving', async ({ page }, info) => {
+    test('Escape closes the add panel without saving, asking first if something was typed', async ({ page }, info) => {
         test.skip(isPhone(info), 'Escape is a keyboard action');
+        await page.keyboard.press('n');
+        await page.keyboard.press('Escape');                       // nothing typed: closes straight away
+        await expect(page.getByRole('dialog', { name: 'New expense' })).toBeHidden();
+
         await page.keyboard.press('n');
         await page.getByPlaceholder('0.00').fill('5');
         await page.keyboard.press('Escape');
+        await expect(page.getByRole('alertdialog', { name: 'Discard changes' })).toBeVisible();
+        await page.getByRole('button', { name: 'KEEP EDITING' }).click();
+        await expect(page.getByPlaceholder('0.00')).toHaveValue('5');   // still there
+        await page.keyboard.press('Escape');
+        await page.getByRole('button', { name: 'DISCARD' }).click();
         await expect(page.getByRole('dialog', { name: 'New expense' })).toBeHidden();
         expect((await (await page.request.get(`/api/dashboard/${new Date().getFullYear()}/${new Date().getMonth() + 1}`)).json()).totalVariable).toBe(0);
     });

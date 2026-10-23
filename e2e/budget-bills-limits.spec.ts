@@ -120,9 +120,10 @@ test.describe('category limits on the Budget page', () => {
         await expect(rows.filter({ hasText: 'Food' })).toContainText('250.00 LEFT');
         await expect(rows.filter({ hasText: 'Entertainment' })).toContainText('OVER BY 6.20');
         await expect(rows.filter({ hasText: 'Health' })).toContainText('NO LIMIT');
-        await expect(page.getByText('$243.80 left to spend')).toBeVisible();
+        await expect(page.getByText('$250.00 left to spend')).toBeVisible(); // Food has 250 left; Entertainment being over is shown apart
+        await expect(page.getByText(/OVER BY 6.20 IN ENTERTAINMENT/)).toBeVisible();
         await expect(page.getByText(/24\.60 UNBUDGETED/)).toBeVisible();
-        await expect(page.getByTestId('sum-left')).toContainText('243.80');
+        await expect(page.getByTestId('sum-left')).toContainText('250.00');
         await expect(page.getByText('· UNSAVED CHANGES').or(page.getByText('· UNSAVED')).filter({ visible: true }).first()).toBeVisible();
 
         await page.getByRole('button', { name: 'SAVE MONTH' }).click();

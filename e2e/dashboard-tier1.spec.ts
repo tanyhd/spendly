@@ -64,7 +64,8 @@ test.describe('dashboard · left to spend, bills and insights', () => {
         await settle(page);
 
         const panel = page.getByTestId('left-to-spend');
-        await expect(panel).toContainText('53.80');                    // 150 − 96.20
+        await expect(panel).toContainText('60.00');                    // Food: 100 − 40; Shopping being over is shown apart
+        await expect(panel).toContainText('OVER BY 6.20 IN SHOPPING');
         await expect(panel).toContainText('96.20 SPENT OF 150.00 BUDGETED · 10.00 UNBUDGETED');
         await expect(panel).toContainText('OVER 6.20');
         await expect(panel).toContainText('60.00 LEFT');

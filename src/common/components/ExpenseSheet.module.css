@@ -273,3 +273,66 @@
         border-top: 1px solid var(--line);
     }
 }
+
+/* Edit: DELETE takes CANCEL's place (ESC ✕ still closes) */
+.deleteBtn {
+    height: 56px;
+    border: 0;
+    border-right: 1px solid var(--line);
+    background: transparent;
+    color: var(--danger);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+}
+
+.deleteBtn:hover {
+    background: var(--neg-hover);
+}
+
+/* "Discard this expense?" before closing with something typed (same bar as the Budget page) */
+.confirm {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    flex: none;
+    border-top: 1px solid var(--line);
+    background: var(--warn);
+    font-size: 0.75rem;
+}
+
+.confirmText {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 20px;
+    line-height: 1.5;
+}
+
+.confirmBtn {
+    min-height: 44px;
+    padding: 0 16px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: transparent;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+}
+
+.confirmDiscard {
+    color: var(--primary);
+}
+
+@media (max-width: 719px) {
+    /* Question on its own line, the two choices side by side under it */
+    .confirmText {
+        flex-basis: 100%;
+    }
+
+    .confirmBtn {
+        flex: 1;
+        border-top: 1px solid var(--line);
+    }
+
+    .confirmBtn:first-of-type {
+        border-left: 0;
+    }
+}

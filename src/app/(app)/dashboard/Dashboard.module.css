@@ -962,3 +962,12 @@
 .comingHead .panelHead > span {
     white-space: nowrap;
 }
+
+/* The whole cell ticks the box, so it is easy to hit on a phone */
+.billTick {
+    cursor: pointer;
+}
+
+.billTick {
+    cursor: pointer;
+}

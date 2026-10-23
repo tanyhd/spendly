@@ -14,10 +14,11 @@ import { cleanMoney } from '@/lib/input';
 type Props = {
     sheet: SheetState;
     onClose: () => void;
-    onAdded: () => void;
+    /** An expense was added or deleted (or a delete undone): pages refetch */
+    onChanged: () => void;
 };
 
-export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
+export default function ExpenseSheet({ sheet, onClose, onChanged }: Props) {
     const toast = useToast();
     const isEdit = sheet.mode === 'edit';
     const today = todayInt();
@@ -30,16 +31,53 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
     const [search, setSearch] = useState('');
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
+    // Asked before closing with something typed: "discard this expense?"
+    const [confirming, setConfirming] = useState(false);
     const amountRef = useRef<HTMLInputElement>(null);
+
+    const dirty = isEdit
+        ? amount !== sheet.entry.amount.toFixed(2) || category !== sheet.entry.category || note !== sheet.entry.note
+        : amount !== '' || note.trim() !== '';
+
+    /** Esc, the overlay, ESC ✕ and CANCEL all come here: nothing typed closes, otherwise ask first */
+    function requestClose() {
+        if (dirty && !confirming) setConfirming(true);
+        else onClose();
+    }
+    const closeRef = useRef(requestClose);
+    useEffect(() => { closeRef.current = requestClose; });
 
     useEffect(() => {
         const t = setTimeout(() => amountRef.current?.focus(), 60);
         function onKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape') closeRef.current();
         }
         window.addEventListener('keydown', onKey);
         return () => { clearTimeout(t); window.removeEventListener('keydown', onKey); };
-    }, [onClose]);
+    }, []);
+
+    /** Edit only: deletes the expense, with UNDO in the toast like everywhere else */
+    async function handleDelete() {
+        if (sheet.mode !== 'edit') return;
+        const entry = sheet.entry;
+        setSaving(true);
+        const res = await fetch(`/api/daily-log/${entry._id}`, { method: 'DELETE' }).catch(() => null);
+        setSaving(false);
+        if (!res?.ok) return setError('Could not delete. Please try again.');
+        onChanged();
+        onClose();
+        toast({
+            msg: `DELETED ${entry.category.toUpperCase()} $${fmt(entry.amount)} · ${fmtDayShort(entry.date)}`,
+            undo: async () => {
+                await fetch('/api/daily-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: entry.date, category: entry.category, amount: entry.amount, note: entry.note }),
+                });
+                onChanged();
+            },
+        });
+    }
 
     const q = search.trim().toLowerCase();
     const tiles = DAILY_CATEGORIES.filter(c => !q || c.id.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
@@ -62,7 +100,7 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
                     body: JSON.stringify({ date, category, amount: amt, note }),
                 });
                 if (!res.ok) throw new Error();
-                onAdded();
+                onChanged();
                 toast(`ADDED ${label}`);
             } else {
                 const res = await fetch(`/api/daily-log/${sheet.entry._id}`, {
@@ -88,7 +126,7 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
 
     return (
         <>
-            <div className={styles.overlay} onClick={onClose} />
+            <div className={styles.overlay} onClick={requestClose} />
             <form
                 className={styles.sheet}
                 onSubmit={handleSubmit}
@@ -98,7 +136,7 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
             >
                 <div className={styles.head}>
                     <span className={styles.title}>{isEdit ? 'EDIT EXPENSE' : 'NEW EXPENSE'}</span>
-                    <button type="button" className={styles.esc} onClick={onClose}>ESC ✕</button>
+                    <button type="button" className={styles.esc} onClick={requestClose}>ESC ✕</button>
                 </div>
 
                 <div className={styles.body}>
@@ -188,8 +226,18 @@ export default function ExpenseSheet({ sheet, onClose, onAdded }: Props) {
                     </label>
                 </div>
 
+                {confirming && (
+                    <div className={styles.confirm} role="alertdialog" aria-label="Discard changes">
+                        <span className={styles.confirmText}>{isEdit ? 'Discard your changes to this expense?' : 'Discard this expense? It hasn’t been added.'}</span>
+                        <button type="button" className={styles.confirmBtn} onClick={() => { setConfirming(false); amountRef.current?.focus(); }}>KEEP EDITING</button>
+                        <button type="button" className={cx(styles.confirmBtn, styles.confirmDiscard)} onClick={onClose}>DISCARD</button>
+                    </div>
+                )}
+
                 <div className={styles.foot}>
-                    <button type="button" className={styles.cancel} onClick={onClose}>CANCEL</button>
+                    {isEdit
+                        ? <button type="button" className={styles.deleteBtn} onClick={handleDelete} disabled={saving}>DELETE</button>
+                        : <button type="button" className={styles.cancel} onClick={requestClose}>CANCEL</button>}
                     <button type="submit" className={styles.submit} disabled={saving}>
                         {saving ? 'SAVING…' : isEdit ? 'SAVE CHANGES ↵' : 'ADD ENTRY ↵'}
                     </button>

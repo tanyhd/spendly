@@ -1,4 +1,4 @@
-import { budgetProgress, suggestLimits } from './budgetProgress';
+import { budgetProgress, suggestLimits, overText } from './budgetProgress';
 
 const LIMITS = [{ category: 'Food', amount: 400 }, { category: 'Transport', amount: 100 }];
 
@@ -8,21 +8,30 @@ describe('budgetProgress (left to spend)', () => {
         expect(p).toMatchObject({ totalLimit: 500, spent: 180, left: 320, unbudgetedSpent: 75.5, timing: 'current' });
     });
 
-    it('daily allowance = left ÷ days left, today included', () => {
+    it('daily allowance = what is still available ÷ days left, today included', () => {
         // Oct 22 → 10 days left (22..31)
         expect(budgetProgress(LIMITS, { Food: 180 }, 2026, 10, 20261022)).toMatchObject({ daysLeft: 10, dailyAllowance: 32 });
         // First day: the whole month
         expect(budgetProgress(LIMITS, {}, 2026, 10, 20261001)).toMatchObject({ daysLeft: 31, dailyAllowance: 16.13 });
-        // Last day: everything left is for today
-        expect(budgetProgress(LIMITS, { Food: 450 }, 2026, 10, 20261031)).toMatchObject({ daysLeft: 1, left: 50, dailyAllowance: 50 });
+        // Last day: everything still available is for today (Food is over, Transport has 100)
+        expect(budgetProgress(LIMITS, { Food: 450 }, 2026, 10, 20261031)).toMatchObject({ daysLeft: 1, left: 50, available: 100, overBy: 50, dailyAllowance: 100 });
     });
 
-    it('has no allowance left once over budget, and never a negative one', () => {
-        const p = budgetProgress(LIMITS, { Food: 496 }, 2026, 10, 20261022);
-        expect(p.left).toBe(4);
+    it('overspending one category does not use up another: it shows separately', () => {
+        // Food 200 over its 400; Transport untouched with 100 left
         const over = budgetProgress(LIMITS, { Food: 600 }, 2026, 10, 20261022);
-        expect(over.left).toBe(-100);
-        expect(over.dailyAllowance).toBe(0);
+        expect(over).toMatchObject({ left: -100, available: 100, overBy: 200, dailyAllowance: 10 });
+    });
+
+    it('has no allowance once every category is at or over its limit, and never a negative one', () => {
+        const all = budgetProgress(LIMITS, { Food: 450, Transport: 100 }, 2026, 10, 20261022);
+        expect(all).toMatchObject({ available: 0, overBy: 50, dailyAllowance: 0 });
+    });
+
+    it('the live-test case: under overall, but one category over', () => {
+        const p = budgetProgress([{ category: 'Food', amount: 100 }, { category: 'Fun', amount: 40 }], { Food: 70.95, Fun: 80.38 }, 2026, 10, 20261022);
+        expect(p).toMatchObject({ left: -11.33, available: 29.05, overBy: 40.38 });
+        expect(p.dailyAllowance).toBeCloseTo(2.91, 2);
     });
 
     it('marks categories ok, warning (80%+) and over', () => {
@@ -64,5 +73,13 @@ describe('suggestLimits', () => {
     it('suggests nothing without history', () => {
         expect(suggestLimits([{}, {}, {}])).toEqual([]);
         expect(suggestLimits([])).toEqual([]);
+    });
+});
+
+describe('overText', () => {
+    it('names the one category over, or counts several', () => {
+        expect(overText(budgetProgress(LIMITS, { Food: 100 }, 2026, 10, 20261022))).toBeNull();
+        expect(overText(budgetProgress(LIMITS, { Food: 1440.5 }, 2026, 10, 20261022))).toBe('OVER BY 1,040.50 IN FOOD');
+        expect(overText(budgetProgress(LIMITS, { Food: 410, Transport: 120 }, 2026, 10, 20261022))).toBe('OVER BY 30.00 IN 2 CATEGORIES');
     });
 });

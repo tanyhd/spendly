@@ -18,13 +18,21 @@ export type BudgetProgress = {
     totalLimit: number;
     /** Spending in categories that have a limit */
     spent: number;
+    /** Total of limits − spent: negative when over budget overall */
     left: number;
+    /**
+     * What can still be spent: the room left in categories that are under their limit. Overspending
+     * in one category doesn't eat into another's limit, so this is what "left to spend" shows.
+     */
+    available: number;
+    /** How far over their limits the over-budget categories are, together */
+    overBy: number;
     /** Spending in categories without a limit, shown separately rather than hidden */
     unbudgetedSpent: number;
     /** 'current' month: daily allowance applies; 'past': final result; 'future': nothing spent yet */
     timing: 'past' | 'current' | 'future';
     daysLeft: number;
-    /** left ÷ days left (today included); 0 once nothing is left; null for past months */
+    /** available ÷ days left (today included); null for past months */
     dailyAllowance: number | null;
     byCategory: CategoryProgress[];
 };
@@ -60,13 +68,16 @@ export function budgetProgress(
     const totalLimit = cents(limits.reduce((s, l) => s + l.amount, 0));
     const spent = cents(byCategory.reduce((s, c) => s + c.spent, 0));
     const left = cents(totalLimit - spent);
+    const available = cents(byCategory.reduce((t, c) => t + Math.max(0, c.left), 0));
+    const overBy = cents(byCategory.reduce((t, c) => t + Math.max(0, -c.left), 0));
     const unbudgetedSpent = cents(
         Object.entries(spentByCategory).filter(([c]) => !limited.has(c)).reduce((s, [, v]) => s + v, 0)
     );
 
     return {
         totalLimit, spent, left, unbudgetedSpent, timing, daysLeft,
-        dailyAllowance: timing === 'past' ? null : cents(Math.max(0, left) / Math.max(1, daysLeft)),
+        available, overBy,
+        dailyAllowance: timing === 'past' ? null : cents(available / Math.max(1, daysLeft)),
         byCategory,
     };
 }
@@ -85,4 +96,12 @@ export function suggestLimits(months: Record<string, number>[]): CategoryLimit[]
         .filter(([, v]) => v > 0)
         .map(([category, v]) => ({ category, amount: Math.ceil(v / active.length / 10) * 10 }))
         .sort((a, b) => b.amount - a.amount);
+}
+
+/** "OVER BY 40.38 IN ENTERTAINMENT" / "OVER BY 52.10 IN 2 CATEGORIES", or null when nothing is over */
+export function overText(p: BudgetProgress): string | null {
+    const over = p.byCategory.filter(c => c.left < 0);
+    if (over.length === 0) return null;
+    const where = over.length === 1 ? over[0].category.toUpperCase() : `${over.length} CATEGORIES`;
+    return `OVER BY ${p.overBy.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} IN ${where}`;
 }

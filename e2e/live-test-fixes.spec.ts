@@ -113,6 +113,47 @@ test.describe('fixes from the live test', () => {
         await expect(page.locator('input[inputmode="decimal"]').first()).toHaveValue('4321.00');
     });
 
+    test('an expense can be deleted from its edit panel, and the delete undone', async ({ page }) => {
+        await addExpense(page, dayInt(), 'Food', 12.5, 'Lunch');
+        await page.goto('/daily-log/all');
+        await settle(page);
+        await page.getByRole('button', { name: /^Edit Food 12\.50 Lunch$/ }).click();
+        await page.getByRole('dialog', { name: 'Edit expense' }).getByRole('button', { name: 'DELETE' }).click();
+        await expect(page.getByRole('dialog', { name: 'Edit expense' })).toBeHidden();
+        await expect(page.getByTestId('expense-row')).toHaveCount(0);
+        await page.getByRole('button', { name: 'UNDO' }).click();
+        await expect(page.getByTestId('expense-row')).toHaveCount(1);
+    });
+
+    test('closing an edit with changes asks first', async ({ page }) => {
+        await addExpense(page, dayInt(), 'Food', 12.5, 'Lunch');
+        await page.goto('/daily-log/all');
+        await settle(page);
+        await page.getByRole('button', { name: /^Edit Food 12\.50 Lunch$/ }).click();
+        await page.getByRole('button', { name: 'ESC ✕' }).click();          // no changes: closes
+        await expect(page.getByRole('dialog', { name: 'Edit expense' })).toBeHidden();
+
+        await page.getByRole('button', { name: /^Edit Food 12\.50 Lunch$/ }).click();
+        await page.getByPlaceholder('e.g. Lunch').fill('Dinner');
+        await page.getByRole('button', { name: 'ESC ✕' }).click();
+        await expect(page.getByText('Discard your changes to this expense?')).toBeVisible();
+        await page.getByRole('button', { name: 'DISCARD' }).click();
+        await expect(page.getByTestId('expense-row')).toContainText('Lunch'); // nothing saved
+    });
+
+    test('tapping anywhere in the paid cell ticks the bill', async ({ page }) => {
+        const { year, month } = thisMonth();
+        await putPlan(page, year, month, { fixedExpenses: [{ id: 'rent', label: 'Rent', category: 'Housing', amount: 100, dueDay: 28 }] });
+        await page.goto('/monthly-budget');
+        await settle(page);
+        const box = page.getByRole('checkbox', { name: 'Rent paid' });
+        const cell = page.locator('label').filter({ has: box });
+        const saved = page.waitForResponse(r => r.url().includes('/bills/rent'));
+        await cell.click({ position: { x: 3, y: 3 } });                 // the cell's corner, well off the 16px box
+        await saved;
+        await expect(box).toBeChecked();
+    });
+
     test('money boxes keep at most 2 decimals', async ({ page }) => {
         await page.goto('/daily-log');
         await settle(page);

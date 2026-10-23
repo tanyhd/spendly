@@ -13,7 +13,7 @@ interface ExpenseContextType {
     openAdd: (date?: number) => void;
     openEdit: (entry: Entry, onSaved?: (e: Entry) => void) => void;
     isOpen: boolean;
-    /** Bumped after every add, so pages can refetch */
+    /** Bumped after every add or delete from the panel, so pages can refetch */
     version: number;
 }
 
@@ -34,7 +34,7 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
                     key={sheet.mode === 'edit' ? sheet.entry._id : 'add'}
                     sheet={sheet}
                     onClose={() => setSheet(null)}
-                    onAdded={() => setVersion(v => v + 1)}
+                    onChanged={() => setVersion(v => v + 1)}
                 />
             )}
         </ExpenseContext.Provider>
