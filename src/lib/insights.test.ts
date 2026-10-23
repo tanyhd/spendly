@@ -46,8 +46,12 @@ describe('category change insight', () => {
     });
 
     it('new spending in a category', () => {
-        expect(texts({ ...base, period: 'week', byCategory: [{ category: 'Health', spent: 60, prevSpent: 0 }] }))
+        expect(texts({ ...base, period: 'week', byCategory: [{ category: 'Health', spent: 60, prevSpent: 0 }, { category: 'Food', spent: 10, prevSpent: 10 }] }))
             .toEqual(['New this week: $60.00 on Health.']);
+    });
+
+    it('says nothing when the whole previous period was empty (a new account)', () => {
+        expect(buildInsights({ ...base, period: 'year', byCategory: [{ category: 'Shopping', spent: 1243.6, prevSpent: 0 }] })).toEqual([]);
     });
 
     it('no comparison (a future period) means no change insight', () => {

@@ -94,3 +94,5 @@ export function upcomingBills(months: MonthBills[], today: number, days: number)
         unpaid: { count: unpaid.length, amount: cents(unpaid.reduce((s, i) => s + i.amount, 0)) },
     };
 }
+
+export type UpcomingResult = ReturnType<typeof upcomingBills>;

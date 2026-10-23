@@ -46,6 +46,8 @@ function budgetInsight(b: BudgetProgress | null): Insight | null {
 }
 
 function changeInsight(cats: CategoryChange[], period: Period): Insight | null {
+    // Nothing at all last time (a new account): every category would read as "new"
+    if (!cats.some(c => (c.prevSpent ?? 0) > 0)) return null;
     const big = cats
         .filter(c => c.prevSpent !== null)
         .map(c => ({ ...c, change: c.spent - c.prevSpent! }))
